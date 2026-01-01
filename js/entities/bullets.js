@@ -13,17 +13,17 @@ let zombiesKilled = 0;      // Количество убитых зомби
 // Примечание: muzzleFlash объявлена в main.js
 
 // ===== СИСТЕМА СТРЕЛЬБЫ =====
-let fireRate = 5;           // Количество выстрелов в секунду
+let fireRate = 2;           // Количество выстрелов в секунду (уменьшено)
 let lastShotTime = 0;        // Время последнего выстрела
+let currentTargetIndex = 0;  // Индекс текущей цели в отсортированном массиве зомби
 
 // ===== СОЗДАНИЕ ПУЛЬ =====
 
 /**
  * Попытка выстрела с ограничением по темпу стрельбы
- * @param {number} dx - Направление X
- * @param {number} dy - Направление Y
+ * Автоматически нацеливается на зомби по очереди (от ближайшего к дальнему)
  */
-function tryShootBullet(dx, dy) {
+function tryShootBullet() {
     const now = performance.now() / 1000;
     const timeSinceLastShot = now - lastShotTime;
 
@@ -32,8 +32,52 @@ function tryShootBullet(dx, dy) {
         return;  // Слишком рано для следующего выстрела
     }
 
-    lastShotTime = now;
-    shootBullet(dx, dy);
+    // Если зомби нет - не стреляем
+    if (zombies.length === 0) {
+        return;
+    }
+
+    // Фильтруем зомби по дальности стрельбы (только те, что в пределах видимости)
+    const maxRange = config.bullet.maxRange;
+    const zombiesInRange = zombies.filter(z => {
+        const dist = Math.hypot(player.x - z.x, player.y - z.y);
+        return dist <= maxRange;
+    });
+
+    // Если нет зомби в пределах дальности - не стреляем
+    if (zombiesInRange.length === 0) {
+        return;
+    }
+
+    // Сортируем зомби по расстоянию от игрока (от ближайшего к дальнему)
+    const sortedZombies = zombiesInRange.sort((a, b) => {
+        const distA = Math.hypot(player.x - a.x, player.y - a.y);
+        const distB = Math.hypot(player.x - b.x, player.y - b.y);
+        return distA - distB;
+    });
+
+    // Выбираем цель по текущему индексу (по очереди от ближайшего к дальнему)
+    if (currentTargetIndex >= sortedZombies.length) {
+        currentTargetIndex = 0;  // Если индекс вышел за границы, начинаем с начала
+    }
+
+    const target = sortedZombies[currentTargetIndex];
+    
+    // Вычисляем направление к цели
+    const dx = target.x - player.x;
+    const dy = target.y - player.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 0.01) {  // Если цель существует
+        // Переходим к следующей цели для следующего выстрела
+        currentTargetIndex++;
+        if (currentTargetIndex >= sortedZombies.length) {
+            currentTargetIndex = 0;  // Начинаем цикл заново
+        }
+
+        lastShotTime = now;
+        shootBullet(dx / dist, dy / dist);
+    }
 }
 
 /**

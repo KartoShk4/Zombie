@@ -2,36 +2,25 @@
    УПРАВЛЕНИЕ ДЖОЙСТИКАМИ (TOUCH)
    ============================================
    Обработка сенсорного управления для
-   мобильных устройств: два джойстика
-   (движение и прицел).
+   мобильных устройств: один джойстик
+   по центру снизу (движение и стрельба).
    ============================================ */
 
 // ===== БАЗОВЫЕ ОБЪЕКТЫ ДЖОЙСТИКОВ =====
 
-// Левый джойстик — движение
+// Единый джойстик — движение и стрельба
 let joystick = {
-    baseX: 100,                          // Базовая позиция X
-    baseY: window.innerHeight - 100,    // Базовая позиция Y
-    stickX: 100,                         // Текущая позиция стика X
-    stickY: window.innerHeight - 100,   // Текущая позиция стика Y
-    radius: 60,                          // Радиус джойстика
-    vector: { x: 0, y: 0 }              // Нормализованный вектор направления
-};
-
-// Правый джойстик — прицел
-let aimJoystick = {
-    baseX: window.innerWidth - 100,      // Базовая позиция X
-    baseY: window.innerHeight - 100,    // Базовая позиция Y
-    stickX: window.innerWidth - 100,     // Текущая позиция стика X
+    baseX: window.innerWidth / 2,       // Базовая позиция X (центр экрана)
+    baseY: window.innerHeight - 100,    // Базовая позиция Y (снизу)
+    stickX: window.innerWidth / 2,      // Текущая позиция стика X
     stickY: window.innerHeight - 100,   // Текущая позиция стика Y
     radius: 60,                          // Радиус джойстика
     vector: { x: 0, y: 0 }              // Нормализованный вектор направления
 };
 
 // ===== ОТСЛЕЖИВАНИЕ КАСАНИЙ =====
-// ID активных касаний для каждого джойстика
-let leftTouchId = null;   // ID касания левого джойстика
-let rightTouchId = null;  // ID касания правого джойстика
+// ID активного касания джойстика
+let touchId = null;   // ID касания джойстика
 
 // ===== ОБРАБОТКА СОБЫТИЙ КАСАНИЯ =====
 
@@ -41,16 +30,10 @@ let rightTouchId = null;  // ID касания правого джойстика
  */
 function handleTouchStart(e) {
     for (let t of e.changedTouches) {
-        // ЛЕВЫЙ ДЖОЙСТИК (левая половина экрана)
-        if (t.clientX < window.innerWidth / 2 && leftTouchId === null) {
-            leftTouchId = t.identifier;
+        // ЕДИНЫЙ ДЖОЙСТИК (любое касание, если джойстик свободен)
+        if (touchId === null) {
+            touchId = t.identifier;
             moveJoystick(joystick, t.clientX, t.clientY);
-        }
-
-        // ПРАВЫЙ ДЖОЙСТИК (правая половина экрана)
-        if (t.clientX > window.innerWidth / 2 && rightTouchId === null) {
-            rightTouchId = t.identifier;
-            moveJoystick(aimJoystick, t.clientX, t.clientY);
         }
     }
 }
@@ -61,13 +44,9 @@ function handleTouchStart(e) {
  */
 function handleTouchMove(e) {
     for (let t of e.changedTouches) {
-        // Обновляем левый джойстик
-        if (t.identifier === leftTouchId) {
+        // Обновляем джойстик
+        if (t.identifier === touchId) {
             moveJoystick(joystick, t.clientX, t.clientY);
-        }
-        // Обновляем правый джойстик
-        if (t.identifier === rightTouchId) {
-            moveJoystick(aimJoystick, t.clientX, t.clientY);
         }
     }
 }
@@ -78,15 +57,10 @@ function handleTouchMove(e) {
  */
 function handleTouchEnd(e) {
     for (let t of e.changedTouches) {
-        // Сбрасываем левый джойстик
-        if (t.identifier === leftTouchId) {
+        // Сбрасываем джойстик
+        if (t.identifier === touchId) {
             resetJoystick(joystick);
-            leftTouchId = null;
-        }
-        // Сбрасываем правый джойстик
-        if (t.identifier === rightTouchId) {
-            resetJoystick(aimJoystick);
-            rightTouchId = null;
+            touchId = null;
         }
     }
 }

@@ -275,7 +275,7 @@ function renderVignette(ctx) {
     );
 
     gradient.addColorStop(0, "rgba(0,0,0,0)");
-    gradient.addColorStop(1, "rgba(0,0,0,0.6)");
+    gradient.addColorStop(1, "rgba(0,0,0,0.15)");  // Уменьшена интенсивность (было 0.6)
 
     ctx.save();
     ctx.fillStyle = gradient;
@@ -443,6 +443,16 @@ function render() {
     // 4. Игровые объекты (следы, кровь, игрок, зомби, пули)
     renderFootprints(ctx);
     renderBlood(ctx);
+    
+    // Радиус стрельбы (белая полупрозрачная рамка)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, config.bullet.maxRange, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    
     renderPlayer(ctx);
     renderZombies(ctx);
     renderBullets(ctx);
@@ -465,8 +475,7 @@ function render() {
         ctx.restore();
     }
 
-    // 6. Джойстики (для мобильных устройств)
-    // Левый джойстик (движение)
+    // 6. Джойстик (для мобильных устройств) - единый джойстик по центру снизу
     ctx.fillStyle = 'rgba(116,116,116,0.3)';
     ctx.beginPath();
     ctx.arc(joystick.baseX, joystick.baseY, joystick.radius, 0, Math.PI * 2);
@@ -475,17 +484,6 @@ function render() {
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.beginPath();
     ctx.arc(joystick.stickX, joystick.stickY, joystick.radius / 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Правый джойстик (прицел)
-    ctx.fillStyle = 'rgba(116,116,116,0.3)';
-    ctx.beginPath();
-    ctx.arc(aimJoystick.baseX, aimJoystick.baseY, aimJoystick.radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.beginPath();
-    ctx.arc(aimJoystick.stickX, aimJoystick.stickY, aimJoystick.radius / 2, 0, Math.PI * 2);
     ctx.fill();
 
     // 7. Виньетка (самый верхний слой)
@@ -508,10 +506,8 @@ function gameLoop() {
     // Обновление состояния игры
     update();
 
-    // Стрельба джойстиком прицела (мобильное управление)
-    if (aimJoystick.vector.x !== 0 || aimJoystick.vector.y !== 0) {
-        tryShootBullet(aimJoystick.vector.x, aimJoystick.vector.y);
-    }
+    // Автоматическая стрельба всегда активна, нацеливается на зомби по очереди
+    tryShootBullet();
 
     // Отрисовка кадра
     render();
@@ -741,17 +737,11 @@ window.addEventListener('resize', () => {
     player.x = WORLD_WIDTH / 2;
     player.y = WORLD_HEIGHT / 2;
 
-    // Левый джойстик (движение)
-    joystick.baseX = 120;
+    // Джойстик (по центру снизу)
+    joystick.baseX = canvas.width / 2;
     joystick.baseY = canvas.height - 120;
     joystick.stickX = joystick.baseX;
     joystick.stickY = joystick.baseY;
-
-    // Правый джойстик (прицел)
-    aimJoystick.baseX = canvas.width - 120;
-    aimJoystick.baseY = canvas.height - 120;
-    aimJoystick.stickX = aimJoystick.baseX;
-    aimJoystick.stickY = aimJoystick.baseY;
 });
 
 // ===== ОБРАБОТКА КЛИКА ПО КНОПКЕ ПАУЗЫ =====
@@ -791,12 +781,11 @@ canvas.addEventListener("touchend", (e) => {
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     
-    // Проверяем, не попали ли в джойстики
-    const leftJoystickDist = Math.hypot(x - joystick.baseX, y - joystick.baseY);
-    const rightJoystickDist = Math.hypot(x - aimJoystick.baseX, y - aimJoystick.baseY);
+    // Проверяем, не попали ли в джойстик
+    const joystickDist = Math.hypot(x - joystick.baseX, y - joystick.baseY);
     
-    // Если не попали в джойстики, проверяем кнопку паузы
-    if (leftJoystickDist > joystick.radius && rightJoystickDist > aimJoystick.radius) {
+    // Если не попали в джойстик, проверяем кнопку паузы
+    if (joystickDist > joystick.radius) {
         checkPauseButtonClick(x, y);
     }
 });
