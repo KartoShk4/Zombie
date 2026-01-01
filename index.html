@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zombie Survival</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -55,16 +55,25 @@
 </div>
 
 <!-- Скрипты -->
-<script src="js/config.js" defer></script>
-<script src="js/input.js" defer></script>
-<script src="js/joysticks.js" defer></script>
-<script src="js/player.js" defer></script>
-<script src="js/zombies.js" defer></script>
-<script src="js/bullets.js" defer></script>
-<script src="js/pixel_heart.js" defer></script>
-<script src="js/hud.js" defer></script>
-<script src="js/wave.js" defer></script>
-<script src="js/main.js" defer></script>
+<!-- Конфигурация и основная логика -->
+<script src="js/core/config.js" defer></script>
+<script src="js/core/main.js" defer></script>
+
+<!-- Управление -->
+<script src="js/controls/input.js" defer></script>
+<script src="js/controls/joysticks.js" defer></script>
+
+<!-- Игровые сущности -->
+<script src="js/entities/player.js" defer></script>
+<script src="js/entities/zombies.js" defer></script>
+<script src="js/entities/bullets.js" defer></script>
+
+<!-- Интерфейс -->
+<script src="js/ui/pixel_heart.js" defer></script>
+<script src="js/ui/hud.js" defer></script>
+
+<!-- Игровая логика -->
+<script src="js/game/wave.js" defer></script>
 
 </body>
 </html>

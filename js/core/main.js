@@ -1,8 +1,23 @@
+/* ============================================
+   ОСНОВНАЯ ЛОГИКА ИГРЫ
+   ============================================
+   Управляет инициализацией, игровым циклом,
+   рендерингом, меню и общими функциями игры.
+   ============================================ */
+
+// ===== ОПРЕДЕЛЕНИЕ ПЛАТФОРМЫ =====
+// Проверка, является ли устройство мобильным
 const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
 
-let gameStarted = false;
-let camera = { x: 0, y: 0 };
+// ===== СОСТОЯНИЕ ИГРЫ =====
+let gameStarted = false;  // Флаг запуска игры
+let camera = { x: 0, y: 0 };  // Позиция камеры
 
+// ===== УПРАВЛЕНИЕ МЕНЮ =====
+
+/**
+ * Запуск игры - скрывает меню и инициализирует игру
+ */
 function startGame() {
     document.getElementById("main-menu").classList.add("hidden");
     canvas.classList.add("game-active"); // Показываем canvas
@@ -12,31 +27,44 @@ function startGame() {
     camera.x = player.x - canvas.width / 2;
     camera.y = player.y - canvas.height / 2;
     
-    // Ограничиваем камеру
+    // Ограничиваем камеру границами мира
     camera.x = Math.max(0, Math.min(camera.x, WORLD_WIDTH - canvas.width));
     camera.y = Math.max(0, Math.min(camera.y, WORLD_HEIGHT - canvas.height));
 }
 
+/**
+ * Открытие меню настроек
+ */
 function openSettings() {
     document.getElementById("main-menu").classList.add("hidden");
     document.getElementById("settings-menu").classList.remove("hidden");
 }
 
+/**
+ * Закрытие меню настроек
+ */
 function closeSettings() {
     document.getElementById("settings-menu").classList.add("hidden");
     document.getElementById("main-menu").classList.remove("hidden");
 }
 
+/**
+ * Открытие меню "Как играть"
+ */
 function openHowToPlay() {
     document.getElementById("main-menu").classList.add("hidden");
     document.getElementById("howto-menu").classList.remove("hidden");
 }
 
+/**
+ * Закрытие меню "Как играть"
+ */
 function closeHowToPlay() {
     document.getElementById("howto-menu").classList.add("hidden");
     document.getElementById("main-menu").classList.remove("hidden");
 }
 
+// ===== ИНИЦИАЛИЗАЦИЯ CANVAS =====
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -44,44 +72,77 @@ const ctx = canvas.getContext("2d");
 let isMouseDown = false;
 let mouseAim = {x: 0, y: 0};
 
-let muzzleFlash = 0;
+// Эффекты
+let muzzleFlash = 0;  // Интенсивность вспышки при выстреле
 
+// Установка размеров canvas
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+// ===== ФОНОВЫЙ CANVAS =====
+// Отдельный canvas для статического фона (травы, земли, камней)
 let backgroundCanvas = document.createElement("canvas");
 let backgroundCtx = backgroundCanvas.getContext("2d");
 backgroundCanvas.width = WORLD_WIDTH;
 backgroundCanvas.height = WORLD_HEIGHT;
 
-let footprints = [];
+// ===== ИГРОВЫЕ ДАННЫЕ =====
+let footprints = [];  // Массив следов игрока
 
-let wave = 1;
-let isWaveActive = false;
-let isWaveCooldown = false;
-let waveCooldownTime = 3; // секунды
-let waveTimer = 0;
-let lightFlicker = 1;
-let cameraShake = 0;
-let cameraShakePower = 8;
-let lastShotAngle = 0;
+// Система волн
+let wave = 1;                    // Текущая волна
+let isWaveActive = false;        // Активна ли волна
+let isWaveCooldown = false;      // Идет ли перерыв между волнами
+let waveCooldownTime = 3;        // Длительность перерыва (секунды)
+let waveTimer = 0;               // Таймер перерыва
 
+// Визуальные эффекты
+let lightFlicker = 1;            // Мерцание света (0.9-1.1)
+let cameraShake = 0;             // Интенсивность дрожания камеры
+let cameraShakePower = 8;        // Мощность дрожания камеры
+let lastShotAngle = 0;           // Угол последнего выстрела
 
+// ===== РЕНДЕРИНГ ЭФФЕКТОВ =====
+
+/**
+ * Отрисовка следов игрока (реалистичные следы ног)
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ */
 function renderFootprints(ctx) {
     footprints.forEach(f => {
         ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.rotation || 0);
         ctx.globalAlpha = f.alpha;
-        ctx.fillStyle = "#3a3a3a";
+        
+        const size = f.size || 8;
+        
+        // След ноги (овальная форма)
+        ctx.fillStyle = "#2a2a2a";
         ctx.beginPath();
-        ctx.arc(f.x, f.y, 6, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, size * 0.6, size * 0.4, 0, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Пальцы (маленькие овалы)
+        ctx.fillStyle = "#1a1a1a";
+        for (let i = -2; i <= 2; i++) {
+            ctx.beginPath();
+            ctx.ellipse(i * size * 0.15, -size * 0.25, size * 0.12, size * 0.08, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
         ctx.restore();
-        f.alpha -= 0.005;
+        f.alpha -= 0.003;  // Медленное исчезновение
     });
 
+    // Удаляем полностью прозрачные следы
     footprints = footprints.filter(f => f.alpha > 0);
 }
 
+/**
+ * Отрисовка виньетки (затемнение по краям экрана)
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ */
 function renderVignette(ctx) {
     let gradient = ctx.createRadialGradient(
         canvas.width / 2, canvas.height / 2, canvas.width * 0.2,
@@ -97,6 +158,11 @@ function renderVignette(ctx) {
     ctx.restore();
 }
 
+// ===== ПРОВЕРКА ОРИЕНТАЦИИ =====
+
+/**
+ * Проверка ориентации экрана (портретная/ландшафтная)
+ */
 function checkOrientation() {
     const warning = document.getElementById("rotate-warning");
 
@@ -123,8 +189,11 @@ window.addEventListener("load", () => {
 window.addEventListener("resize", checkOrientation);
 window.addEventListener("orientationchange", checkOrientation);
 
-// Удалена ссылка на несуществующий элемент fullscreen-btn
+// ===== ПОЛНОЭКРАННЫЙ РЕЖИМ =====
 
+/**
+ * Запрос полноэкранного режима
+ */
 function requestFullscreen() {
     if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(err => {
@@ -137,45 +206,64 @@ window.addEventListener("click", requestFullscreen, {once: true});
 
 checkOrientation();
 
+// ===== УПРАВЛЕНИЕ ВОЛНАМИ =====
+
+/**
+ * Запуск перерыва между волнами
+ */
 function startWaveCooldown() {
     isWaveActive = false;
     isWaveCooldown = true;
     waveTimer = waveCooldownTime;
 }
 
+// ===== ОБНОВЛЕНИЕ ИГРЫ =====
+
+/**
+ * Основная функция обновления игрового состояния
+ * Вызывается каждый кадр
+ */
 function update() {
+    // Обновление игровых объектов
     updatePlayer();
     updateZombies();
     updateBullets();
 
+    // Обработка перерыва между волнами
     if (isWaveCooldown) {
-        waveTimer -= 1 / 60;
+        waveTimer -= 1 / 60;  // Уменьшаем таймер (60 FPS)
         if (waveTimer <= 0) {
             isWaveCooldown = false;
             wave++;
-            spawnWave(wave);
+            spawnWave(wave);  // Запускаем следующую волну
         }
     }
 
-    // кулдаун урона игроку
+    // Обновление кулдауна урона игроку
     if (playerHitCooldown > 0) {
         playerHitCooldown -= 1 / 60;
         if (playerHitCooldown < 0) playerHitCooldown = 0;
     }
 
+    // Мерцание света (случайное значение)
     lightFlicker = 0.9 + Math.random() * 0.2;
 
     // === ОБНОВЛЕНИЕ КАМЕРЫ ===
+    // Камера следует за игроком
     camera.x = player.x - canvas.width / 2;
     camera.y = player.y - canvas.height / 2;
 
-    // ограничиваем камеру, чтобы не выходила за мир
+    // Ограничиваем камеру границами мира
     camera.x = Math.max(0, Math.min(camera.x, WORLD_WIDTH - canvas.width));
     camera.y = Math.max(0, Math.min(camera.y, WORLD_HEIGHT - canvas.height));
-
 }
 
-// Туман
+// ===== РЕНДЕРИНГ ЭФФЕКТОВ ОКРУЖЕНИЯ =====
+
+/**
+ * Отрисовка тумана
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ */
 function renderFog(ctx) {
     ctx.save();
     ctx.fillStyle = "rgba(200, 200, 200, 0.15)";
@@ -183,8 +271,14 @@ function renderFog(ctx) {
     ctx.restore();
 }
 
+// ===== ОСНОВНОЙ РЕНДЕРИНГ =====
+
+/**
+ * Главная функция отрисовки игры
+ * Рисует все слои в правильном порядке
+ */
 function render() {
-    // 1. Фон (первый слой)
+    // 1. Фон (первый слой) - статический фон мира
     ctx.drawImage(backgroundCanvas, -camera.x, -camera.y);
 
     // 2. Туман
@@ -193,21 +287,21 @@ function render() {
     // 3. Эффекты сцены (камера, вспышка)
     ctx.save();
 
-    // смещение камеры
+    // Смещение камеры
     ctx.translate(-camera.x, -camera.y);
 
-    // мерцание света
+    // Мерцание света
     ctx.globalAlpha = lightFlicker;
 
-    // дрожание камеры
+    // Дрожание камеры (при уроне)
     if (cameraShake > 0) {
         const shakeX = (Math.random() - 0.5) * cameraShake;
         const shakeY = (Math.random() - 0.5) * cameraShake;
         ctx.translate(shakeX, shakeY);
-        cameraShake *= 0.9;
+        cameraShake *= 0.9;  // Затухание дрожания
     }
 
-    // вспышка при выстреле
+    // Вспышка при выстреле
     if (muzzleFlash > 0) {
         ctx.save();
 
@@ -216,6 +310,7 @@ function render() {
 
         ctx.globalAlpha = muzzleFlash / 3;
 
+        // Отрисовка вспышки (желтые прямоугольники)
         ctx.fillStyle = "#ffe066";
         ctx.fillRect(25, -4, 16, 8);
 
@@ -227,22 +322,23 @@ function render() {
 
         ctx.restore();
 
-        muzzleFlash -= 0.3;
+        muzzleFlash -= 0.3;  // Уменьшение интенсивности
     }
 
-    // 4. Следы, кровь, игрок, зомби, пули
+    // 4. Игровые объекты (следы, кровь, игрок, зомби, пули)
     renderFootprints(ctx);
     renderBlood(ctx);
     renderPlayer(ctx);
     renderZombies(ctx);
     renderBullets(ctx);
 
-    ctx.restore(); // ← HUD рисуем ПОСЛЕ restore()
+    ctx.restore(); // Восстанавливаем трансформации
 
     // 5. HUD (всегда поверх всего)
     renderHUD(ctx);
 
-    // 6. Джойстики
+    // 6. Джойстики (для мобильных устройств)
+    // Левый джойстик (движение)
     ctx.fillStyle = 'rgba(116,116,116,0.3)';
     ctx.beginPath();
     ctx.arc(joystick.baseX, joystick.baseY, joystick.radius, 0, Math.PI * 2);
@@ -253,6 +349,7 @@ function render() {
     ctx.arc(joystick.stickX, joystick.stickY, joystick.radius / 2, 0, Math.PI * 2);
     ctx.fill();
 
+    // Правый джойстик (прицел)
     ctx.fillStyle = 'rgba(116,116,116,0.3)';
     ctx.beginPath();
     ctx.arc(aimJoystick.baseX, aimJoystick.baseY, aimJoystick.radius, 0, Math.PI * 2);
@@ -267,29 +364,44 @@ function render() {
     renderVignette(ctx);
 }
 
+// ===== ИГРОВОЙ ЦИКЛ =====
+
+/**
+ * Главный игровой цикл
+ * Вызывается через requestAnimationFrame
+ */
 function gameLoop() {
+    // Если игра не запущена, просто продолжаем цикл
     if (!gameStarted) {
         requestAnimationFrame(gameLoop);
         return;
     }
 
-
+    // Обновление состояния игры
     update();
 
-    // стрельба мышью — автоогонь, но с ограниченным темпом
+    // Стрельба мышью — автоогонь, но с ограниченным темпом
     if (isMouseDown) {
         tryShootBullet(mouseAim.x - player.x, mouseAim.y - player.y);
     }
 
-    // стрельба джойстиком прицела
+    // Стрельба джойстиком прицела
     if (aimJoystick.vector.x !== 0 || aimJoystick.vector.y !== 0) {
         tryShootBullet(aimJoystick.vector.x, aimJoystick.vector.y);
     }
 
+    // Отрисовка кадра
     render();
+    
+    // Продолжаем цикл
     requestAnimationFrame(gameLoop);
 }
 
+// ===== УПРАВЛЕНИЕ ИГРОЙ =====
+
+/**
+ * Обработка окончания игры
+ */
 function gameOver() {
     gameStarted = false;
     canvas.classList.remove("game-active"); // Скрываем canvas при game over
@@ -297,10 +409,18 @@ function gameOver() {
     document.getElementById("final-score").innerText = "Счёт: " + score;
 }
 
+/**
+ * Перезапуск игры
+ */
 function restartGame() {
     location.reload();
 }
 
+// ===== ГЕНЕРАЦИЯ ФОНА =====
+
+/**
+ * Генерация статического фона (трава, земля, камни)
+ */
 function generateStaticBackground() {
     const ctx = backgroundCtx;
     const w = backgroundCanvas.width;
@@ -308,8 +428,8 @@ function generateStaticBackground() {
 
     // === БАЗОВЫЙ ГРАДИЕНТ ЗЕМЛИ ===
     const grd = ctx.createLinearGradient(0, 0, 0, h);
-    grd.addColorStop(0, "#5c8a3e");
-    grd.addColorStop(1, "#4f6b32");
+    grd.addColorStop(0, "#5c8a3e");  // Светло-зеленый сверху
+    grd.addColorStop(1, "#4f6b32");  // Темно-зеленый снизу
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, w, h);
 
@@ -343,11 +463,13 @@ function generateStaticBackground() {
         const y = Math.random() * h;
         const r = 6 + Math.random() * 10;
 
+        // Основной камень
         ctx.fillStyle = `rgba(120, 120, 120, ${0.2 + Math.random() * 0.2})`;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
 
+        // Блик на камне
         ctx.fillStyle = `rgba(200, 200, 200, 0.2)`;
         ctx.beginPath();
         ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.4, 0, Math.PI * 2);
@@ -355,11 +477,14 @@ function generateStaticBackground() {
     }
 }
 
+// ===== ОБРАБОТКА ИЗМЕНЕНИЯ РАЗМЕРА ОКНА =====
+
 window.addEventListener('resize', () => {
+    // Обновление размеров canvas
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // пересоздаём фон
+    // Пересоздаём фон
     backgroundCanvas.width = WORLD_WIDTH;
     backgroundCanvas.height = WORLD_HEIGHT;
     generateStaticBackground();
@@ -381,11 +506,20 @@ window.addEventListener('resize', () => {
     aimJoystick.stickY = aimJoystick.baseY;
 });
 
+// ===== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ =====
+
 window.onload = () => {
+    // Генерация фона
     generateStaticBackground();
+    
     // Сбрасываем флаги волны перед первым спавном
     isWaveActive = false;
     isWaveCooldown = false;
+    
+    // Запускаем первую волну
     spawnWave(wave);
+    
+    // Запускаем игровой цикл
     gameLoop();
 };
+

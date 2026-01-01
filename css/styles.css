@@ -1,3 +1,8 @@
+/* ============================================
+   ZOMBIE SURVIVAL GAME - СТИЛИ
+   ============================================ */
+
+/* ===== БАЗОВЫЕ СТИЛИ ===== */
 html, body {
     margin: 0;
     padding: 0;
@@ -7,13 +12,14 @@ html, body {
     image-rendering: pixelated;
 }
 
-/* Однотонный фон */
+/* Однотонный фон для body */
 body {
     background: #111;
 }
 
 /* ===== CANVAS (z-index: 1) ===== */
 
+/* Основной canvas для отрисовки игры */
 #canvas {
     position: fixed;
     inset: 0;
@@ -24,12 +30,14 @@ body {
     background: transparent;
 }
 
+/* Класс для активной игры - показывает canvas */
 #canvas.game-active {
     display: block;
 }
 
 /* ===== ПОЛНОЭКРАННОЕ МЕНЮ (z-index: 10) ===== */
 
+/* Контейнер меню - полноэкранный overlay */
 .menu {
     position: fixed;
     inset: 0;
@@ -50,6 +58,7 @@ body {
     z-index: 10;
 }
 
+/* Контент меню - центрированный блок */
 .menu-content {
     text-align: center;
     position: relative;
@@ -59,7 +68,9 @@ body {
     margin: auto;
 }
 
-/* Заголовок */
+/* ===== ТИПОГРАФИКА ===== */
+
+/* Заголовок меню */
 .title {
     font-size: 32px;
     margin-bottom: 40px;
@@ -68,7 +79,9 @@ body {
     letter-spacing: 2px;
 }
 
-/* Кнопки */
+/* ===== КНОПКИ ===== */
+
+/* Стили кнопок меню */
 .menu-btn {
     display: block;
     width: 260px;
@@ -86,15 +99,20 @@ body {
     transition: transform 0.1s steps(2), background 0.1s;
 }
 
+/* Эффекты при наведении и нажатии */
 .menu-btn:hover { transform: scale(1.05); background: #444; }
 .menu-btn:active { transform: scale(0.95); background: #666; }
 
+/* ===== УТИЛИТЫ ===== */
+
+/* Скрытие элементов */
 .hidden { display: none; }
 
-/* CRT эффект удален */
+/* ===== АНИМАЦИИ ===== */
 
 /* Анимация появления меню */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-10px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
