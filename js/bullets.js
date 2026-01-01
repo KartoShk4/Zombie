@@ -45,12 +45,12 @@ function updateBullets() {
                     score++;
                     zombiesKilled++;
 
-                    if (zombiesKilled >= zombiesPerWave) {
-                        wave++;
-                        zombiesKilled = 0;
-                        spawnWave(wave);
+                    if (zombies.length === 0) {
+                        startWaveCooldown();
                     }
                 }
+
+
                 break;
             }
         }

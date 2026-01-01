@@ -5,11 +5,30 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let wave = 1;
+let isWaveActive = false;
+let isWaveCooldown = false;
+let waveCooldownTime = 3; // секунды
+let waveTimer = 0;
+
+function startWaveCooldown() {
+    isWaveActive = false;
+    isWaveCooldown = true;
+    waveTimer = waveCooldownTime;
+}
 
 function update() {
     updatePlayer();
     updateZombies();
     updateBullets();
+
+    if (isWaveCooldown) {
+        waveTimer -= 1 / 60; // 60 FPS
+        if (waveTimer <= 0) {
+            isWaveCooldown = false;
+            wave++;
+            spawnWave(wave);
+        }
+    }
 }
 
 function render() {

@@ -13,4 +13,14 @@ function renderHUD(ctx) {
 
     ctx.fillStyle = 'black';
     ctx.fillText("Score: " + score, canvas.width - 120, 30);
+
+    if (isWaveCooldown) {
+        ctx.fillStyle = "white";
+        ctx.font = "40px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Next wave in: " + Math.ceil(waveTimer), canvas.width / 2, 80);
+        ctx.textAlign = "left";
+    }
+
 }
+

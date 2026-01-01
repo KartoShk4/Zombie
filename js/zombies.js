@@ -2,6 +2,10 @@ let zombies = [];
 let nextZombieId = 1;
 
 function spawnWave(wave) {
+    if (isWaveActive || isWaveCooldown) return;
+
+    isWaveActive = true;
+
     const count = config.wave.baseZombies + wave;
 
     for (let i = 0; i < count; i++) {
@@ -16,6 +20,7 @@ function spawnWave(wave) {
         });
     }
 }
+
 
 function updateZombies() {
     for (let z of zombies) {
