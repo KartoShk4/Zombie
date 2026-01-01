@@ -103,6 +103,14 @@ body {
 .menu-btn:hover { transform: scale(1.05); background: #444; }
 .menu-btn:active { transform: scale(0.95); background: #666; }
 
+/* Текст в меню */
+.text {
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.8;
+    margin: 20px 0;
+}
+
 /* ===== УТИЛИТЫ ===== */
 
 /* Скрытие элементов */

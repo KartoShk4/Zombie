@@ -18,7 +18,8 @@
     <div class="menu-content">
         <h1 class="title">ZOMBIE SURVIVE</h1>
 
-        <button class="menu-btn" onclick="startGame()">▶ Старт</button>
+        <button class="menu-btn" id="continue-btn" onclick="startGame(true)" style="display: none;">▶ Продолжить</button>
+        <button class="menu-btn" onclick="startGame(false)">▶ Новая игра</button>
         <button class="menu-btn" onclick="openSettings()">⚙ Настройки</button>
         <button class="menu-btn" onclick="openHowToPlay()">❓ Как играть</button>
     </div>
@@ -28,6 +29,27 @@
 <div id="settings-menu" class="menu hidden">
     <div class="menu-content">
         <h2 class="title">Настройки</h2>
+        
+        <div style="margin: 30px 0;">
+            <h3 style="font-size: 18px; color: #ff4444; margin-bottom: 20px;">Уровень сложности</h3>
+            
+            <button class="menu-btn difficulty-btn" data-difficulty="easy" onclick="selectDifficulty('easy')" style="width: 220px;">
+                <span id="difficulty-easy-check" style="opacity: 0;">✓ </span>Легкий
+            </button>
+            <button class="menu-btn difficulty-btn" data-difficulty="normal" onclick="selectDifficulty('normal')" style="width: 220px;">
+                <span id="difficulty-normal-check" style="opacity: 0;">✓ </span>Обычный
+            </button>
+            <button class="menu-btn difficulty-btn" data-difficulty="hard" onclick="selectDifficulty('hard')" style="width: 220px;">
+                <span id="difficulty-hard-check" style="opacity: 0;">✓ </span>Сложный
+            </button>
+            
+            <p class="text" style="font-size: 12px; margin-top: 20px; color: #aaa;">
+                Легкий: +50% HP, -30% скорость зомби, -40% урон<br>
+                Обычный: Стандартные значения<br>
+                Сложный: -30% HP, +50% скорость зомби, +80% урон
+            </p>
+        </div>
+        
         <button class="menu-btn" onclick="closeSettings()">Назад</button>
     </div>
 </div>
@@ -38,7 +60,8 @@
         <h2 class="title">Как играть</h2>
         <p class="text">
             • Двигайся левым джойстиком<br>
-            • Стреляй правым<br>
+            • Стреляй правым джойстиком<br>
+            • Игра автоматически сохраняется<br>
             • Выживи как можно дольше
         </p>
         <button class="menu-btn" onclick="closeHowToPlay()">Назад</button>
@@ -54,9 +77,22 @@
     </div>
 </div>
 
+<!-- Пауза -->
+<div id="pause-menu" class="menu hidden">
+    <div class="menu-content">
+        <h1 class="title">ПАУЗА</h1>
+        <button class="menu-btn" onclick="resumeGame()">▶ Продолжить</button>
+        <button class="menu-btn" onclick="saveGame(); resumeGame();">💾 Сохранить</button>
+        <button class="menu-btn" onclick="saveAndQuit()">💾 Сохранить и выйти</button>
+        <button class="menu-btn" onclick="quitWithoutSave()">🚪 Выйти</button>
+    </div>
+</div>
+
 <!-- Скрипты -->
 <!-- Конфигурация и основная логика -->
 <script src="js/core/config.js" defer></script>
+<script src="js/core/difficulty.js" defer></script>
+<script src="js/core/save.js" defer></script>
 <script src="js/core/main.js" defer></script>
 
 <!-- Управление -->

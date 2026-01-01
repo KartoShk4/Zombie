@@ -13,6 +13,7 @@ let player = {
     x: WORLD_WIDTH / 2,               // Позиция X (центр мира)
     y: WORLD_HEIGHT / 2,              // Позиция Y (центр мира)
     health: config.player.health,     // Текущее здоровье
+    maxHealth: config.player.health,  // Максимальное здоровье (с учетом сложности)
     speed: config.player.speed        // Скорость движения
 };
 
@@ -50,19 +51,13 @@ function damagePlayer(amount) {
  * Обрабатывает движение и ограничения
  */
 function updatePlayer() {
-    // === 1. УПРАВЛЕНИЕ ДЖОЙСТИКОМ (ТЕЛЕФОН) ===
+    // === 1. УПРАВЛЕНИЕ ДЖОЙСТИКОМ (МОБИЛЬНОЕ) ===
     if (joystick.vector.x !== 0 || joystick.vector.y !== 0) {
         player.x += joystick.vector.x * player.speed;
         player.y += joystick.vector.y * player.speed;
     }
 
-    // === 2. УПРАВЛЕНИЕ WASD (ПК) ===
-    if (keys.w) player.y -= player.speed;  // Вверх
-    if (keys.s) player.y += player.speed;  // Вниз
-    if (keys.a) player.x -= player.speed;  // Влево
-    if (keys.d) player.x += player.speed; // Вправо
-
-    // === 3. ОГРАНИЧЕНИЯ ПО КРАЯМ МИРА ===
+    // === 2. ОГРАНИЧЕНИЯ ПО КРАЯМ МИРА ===
     // Не даем игроку выйти за границы мира
     if (player.x < player.width / 2) player.x = player.width / 2;
     if (player.x > WORLD_WIDTH - player.width / 2) player.x = WORLD_WIDTH - player.width / 2;
@@ -72,19 +67,8 @@ function updatePlayer() {
 
     // === 4. СОЗДАНИЕ СЛЕДОВ ===
     // Создаем следы только при реальном движении
-    let moveX = 0;
-    let moveY = 0;
-    
-    if (joystick.vector.x !== 0 || joystick.vector.y !== 0) {
-        moveX = joystick.vector.x;
-        moveY = joystick.vector.y;
-    } else {
-        if (keys.w) moveY = -1;
-        if (keys.s) moveY = 1;
-        if (keys.a) moveX = -1;
-        if (keys.d) moveX = 1;
-    }
-    
+    const moveX = joystick.vector.x;
+    const moveY = joystick.vector.y;
     const isMoving = moveX !== 0 || moveY !== 0;
     
     if (isMoving && Math.random() < 0.12) {

@@ -21,7 +21,8 @@ function renderHUD(ctx) {
     drawPixelHeart(ctx, 20, 20, 3);
 
     // === 2. ПОЛОСКА ЗДОРОВЬЯ ===
-    const maxHP = config.player.health;
+    // Используем максимальное здоровье игрока (с учетом сложности)
+    const maxHP = player.maxHealth || config.player.health;
     const hpWidth = 120;
 
     // Рамка полоски
@@ -53,6 +54,22 @@ function renderHUD(ctx) {
         ctx.font = "24px 'Press Start 2P'";
         ctx.fillText("Next wave in " + Math.ceil(waveTimer), canvas.width / 2, 80);
         ctx.textAlign = "left";
+    }
+
+    // === 6. КНОПКА ПАУЗЫ (для мобильных) ===
+    if (isMobile) {
+        const pauseBtnSize = 40;
+        const pauseBtnX = canvas.width - pauseBtnSize - 20;
+        const pauseBtnY = 20;
+        
+        // Фон кнопки
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillRect(pauseBtnX - 5, pauseBtnY - 5, pauseBtnSize + 10, pauseBtnSize + 10);
+        
+        // Иконка паузы (две вертикальные линии)
+        ctx.fillStyle = "white";
+        ctx.fillRect(pauseBtnX, pauseBtnY, pauseBtnSize * 0.25, pauseBtnSize);
+        ctx.fillRect(pauseBtnX + pauseBtnSize * 0.5, pauseBtnY, pauseBtnSize * 0.25, pauseBtnSize);
     }
 
     ctx.restore();

@@ -11,17 +11,71 @@ const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAg
 
 // ===== СОСТОЯНИЕ ИГРЫ =====
 let gameStarted = false;  // Флаг запуска игры
+let isPaused = false;    // Флаг паузы
 let camera = { x: 0, y: 0 };  // Позиция камеры
 
 // ===== УПРАВЛЕНИЕ МЕНЮ =====
 
 /**
  * Запуск игры - скрывает меню и инициализирует игру
+ * @param {boolean} loadFromSave - Загружать ли из сохранения
  */
-function startGame() {
+function startGame(loadFromSave = false) {
     document.getElementById("main-menu").classList.add("hidden");
     canvas.classList.add("game-active"); // Показываем canvas
     gameStarted = true;
+    isPaused = false;
+    
+    // Если загружаем из сохранения, восстанавливаем состояние
+    if (loadFromSave) {
+        const saveData = loadGame();
+        if (saveData) {
+            restoreGame(saveData);
+        }
+    } else {
+        // НОВАЯ ИГРА - полностью сбрасываем состояние
+        // Удаляем сохранение
+        deleteSave();
+        
+        // Скрываем кнопку "Продолжить" в главном меню
+        document.getElementById("continue-btn").style.display = "none";
+        
+        // Сбрасываем игровые переменные
+        wave = 1;
+        score = 0;
+        zombiesKilled = 0;
+        isWaveActive = false;
+        isWaveCooldown = false;
+        waveTimer = 0;
+        
+        // Очищаем массивы
+        zombies = [];
+        bullets = [];
+        footprints = [];
+        blood = [];
+        
+        // Сбрасываем счетчик ID зомби
+        if (typeof nextZombieId !== 'undefined') {
+            nextZombieId = 1;
+        }
+        
+        // Сбрасываем позицию игрока на центр мира
+        player.x = WORLD_WIDTH / 2;
+        player.y = WORLD_HEIGHT / 2;
+        playerHitCooldown = 0;
+        
+        // Применяем сложность к игроку (только при новой игре)
+        applyDifficultyToPlayer();
+        
+        // Запускаем первую волну
+        isWaveActive = false;
+        isWaveCooldown = false;
+        setTimeout(() => {
+            if (typeof spawnWave === 'function') {
+                spawnWave(wave);
+            }
+        }, 100);
+    }
     
     // Инициализируем камеру на игрока при старте
     camera.x = player.x - canvas.width / 2;
@@ -38,6 +92,42 @@ function startGame() {
 function openSettings() {
     document.getElementById("main-menu").classList.add("hidden");
     document.getElementById("settings-menu").classList.remove("hidden");
+    updateDifficultyUI();
+}
+
+/**
+ * Выбор уровня сложности
+ * @param {string} difficulty - 'easy', 'normal' или 'hard'
+ */
+function selectDifficulty(difficulty) {
+    setDifficulty(difficulty);
+    updateDifficultyUI();
+}
+
+/**
+ * Обновление UI выбора сложности
+ */
+function updateDifficultyUI() {
+    const current = getDifficulty();
+    
+    // Скрываем все галочки
+    document.getElementById("difficulty-easy-check").style.opacity = "0";
+    document.getElementById("difficulty-normal-check").style.opacity = "0";
+    document.getElementById("difficulty-hard-check").style.opacity = "0";
+    
+    // Показываем галочку для выбранной сложности
+    document.getElementById(`difficulty-${current}-check`).style.opacity = "1";
+    
+    // Обновляем стили кнопок
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+        if (btn.dataset.difficulty === current) {
+            btn.style.background = "#444";
+            btn.style.borderColor = "#ff4444";
+        } else {
+            btn.style.background = "#222";
+            btn.style.borderColor = "#555";
+        }
+    });
 }
 
 /**
@@ -68,9 +158,7 @@ function closeHowToPlay() {
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// Глобальные переменные управления (страховка, если input.js загрузится позже)
-let isMouseDown = false;
-let mouseAim = {x: 0, y: 0};
+// Управление только через джойстики (мобильное)
 
 // Эффекты
 let muzzleFlash = 0;  // Интенсивность вспышки при выстреле
@@ -89,12 +177,16 @@ backgroundCanvas.height = WORLD_HEIGHT;
 // ===== ИГРОВЫЕ ДАННЫЕ =====
 let footprints = [];  // Массив следов игрока
 
-// Система волн
+// Система волн (глобальные переменные для доступа из других модулей)
 let wave = 1;                    // Текущая волна
 let isWaveActive = false;        // Активна ли волна
 let isWaveCooldown = false;      // Идет ли перерыв между волнами
 let waveCooldownTime = 3;        // Длительность перерыва (секунды)
 let waveTimer = 0;               // Таймер перерыва
+
+// Делаем переменные глобальными для доступа из других модулей
+window.isWaveActive = isWaveActive;
+window.isWaveCooldown = isWaveCooldown;
 
 // Визуальные эффекты
 let lightFlicker = 1;            // Мерцание света (0.9-1.1)
@@ -190,19 +282,7 @@ window.addEventListener("resize", checkOrientation);
 window.addEventListener("orientationchange", checkOrientation);
 
 // ===== ПОЛНОЭКРАННЫЙ РЕЖИМ =====
-
-/**
- * Запрос полноэкранного режима
- */
-function requestFullscreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
-            console.warn("Fullscreen blocked by browser:", err);
-        });
-    }
-}
-
-window.addEventListener("click", requestFullscreen, {once: true});
+// Удалено для мобильных устройств - используется автоматически
 
 checkOrientation();
 
@@ -336,6 +416,19 @@ function render() {
 
     // 5. HUD (всегда поверх всего)
     renderHUD(ctx);
+    
+    // 6. Индикатор паузы
+    if (isPaused) {
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "32px 'Press Start 2P'";
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.fillText("ПАУЗА", canvas.width / 2, canvas.height / 2);
+        ctx.textAlign = "left";
+        ctx.restore();
+    }
 
     // 6. Джойстики (для мобильных устройств)
     // Левый джойстик (движение)
@@ -380,12 +473,7 @@ function gameLoop() {
     // Обновление состояния игры
     update();
 
-    // Стрельба мышью — автоогонь, но с ограниченным темпом
-    if (isMouseDown) {
-        tryShootBullet(mouseAim.x - player.x, mouseAim.y - player.y);
-    }
-
-    // Стрельба джойстиком прицела
+    // Стрельба джойстиком прицела (мобильное управление)
     if (aimJoystick.vector.x !== 0 || aimJoystick.vector.y !== 0) {
         tryShootBullet(aimJoystick.vector.x, aimJoystick.vector.y);
     }
@@ -413,7 +501,76 @@ function gameOver() {
  * Перезапуск игры
  */
 function restartGame() {
+    deleteSave();
     location.reload();
+}
+
+// ===== УПРАВЛЕНИЕ ПАУЗОЙ =====
+
+/**
+ * Постановка игры на паузу
+ */
+function pauseGame() {
+    if (!gameStarted || isPaused) return;
+    
+    isPaused = true;
+    document.getElementById("pause-menu").classList.remove("hidden");
+    saveGame(); // Автосохранение при паузе
+}
+
+/**
+ * Снятие игры с паузы
+ */
+function resumeGame() {
+    if (!isPaused) return;
+    
+    isPaused = false;
+    document.getElementById("pause-menu").classList.add("hidden");
+}
+
+/**
+ * Сохранение и выход в меню
+ */
+/**
+ * Выход из игры без сохранения
+ */
+function quitWithoutSave() {
+    // Скрываем меню паузы
+    document.getElementById("pause-menu").classList.add("hidden");
+    
+    // Скрываем canvas
+    canvas.classList.remove("game-active");
+    
+    // Сбрасываем флаг игры
+    gameStarted = false;
+    isPaused = false;
+    
+    // Показываем главное меню
+    document.getElementById("main-menu").classList.remove("hidden");
+    
+    // Проверяем наличие сохранения и показываем кнопку "Продолжить", если есть
+    if (hasSave()) {
+        document.getElementById("continue-btn").style.display = "block";
+    } else {
+        document.getElementById("continue-btn").style.display = "none";
+    }
+    
+    console.log('Выход из игры без сохранения');
+}
+
+/**
+ * Сохранение и выход из игры
+ */
+function saveAndQuit() {
+    saveGame();
+    isPaused = false;
+    gameStarted = false;
+    document.getElementById("pause-menu").classList.add("hidden");
+    document.getElementById("main-menu").classList.remove("hidden");
+    canvas.classList.remove("game-active");
+    
+    // Показываем кнопку "Продолжить" в главном меню, так как есть сохранение
+    document.getElementById("continue-btn").style.display = "block";
 }
 
 // ===== ГЕНЕРАЦИЯ ФОНА =====
@@ -506,18 +663,76 @@ window.addEventListener('resize', () => {
     aimJoystick.stickY = aimJoystick.baseY;
 });
 
-// ===== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ =====
+// ===== ОБРАБОТКА КЛИКА ПО КНОПКЕ ПАУЗЫ =====
+// Обработка клика по кнопке паузы в HUD (для мобильных)
+function checkPauseButtonClick(x, y) {
+    if (!isMobile || !gameStarted || isPaused) return false;
+    
+    const pauseBtnSize = 40;
+    const pauseBtnX = canvas.width - pauseBtnSize - 20;
+    const pauseBtnY = 20;
+    
+    if (x >= pauseBtnX - 5 && x <= pauseBtnX + pauseBtnSize + 5 &&
+        y >= pauseBtnY - 5 && y <= pauseBtnY + pauseBtnSize + 5) {
+        pauseGame();
+        return true;
+    }
+    return false;
+}
+
+// Обработка клика по canvas (для кнопки паузы)
+canvas.addEventListener("click", (e) => {
+    if (!gameStarted) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    checkPauseButtonClick(x, y);
+});
+
+// Обработка касания (для мобильных)
+canvas.addEventListener("touchend", (e) => {
+    if (!gameStarted) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.changedTouches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    // Проверяем, не попали ли в джойстики
+    const leftJoystickDist = Math.hypot(x - joystick.baseX, y - joystick.baseY);
+    const rightJoystickDist = Math.hypot(x - aimJoystick.baseX, y - aimJoystick.baseY);
+    
+    // Если не попали в джойстики, проверяем кнопку паузы
+    if (leftJoystickDist > joystick.radius && rightJoystickDist > aimJoystick.radius) {
+        checkPauseButtonClick(x, y);
+    }
+});
 
 window.onload = () => {
     // Генерация фона
     generateStaticBackground();
     
-    // Сбрасываем флаги волны перед первым спавном
-    isWaveActive = false;
-    isWaveCooldown = false;
+    // Загружаем сохраненную сложность
+    loadDifficulty();
     
-    // Запускаем первую волну
-    spawnWave(wave);
+    // Обновляем UI сложности в настройках
+    updateDifficultyUI();
+    
+    // Проверяем наличие сохранения и показываем кнопку "Продолжить"
+    if (hasSave()) {
+        document.getElementById("continue-btn").style.display = "block";
+    }
+    
+    // Сбрасываем флаги волны перед первым спавном (только если нет сохранения)
+    if (!hasSave()) {
+        isWaveActive = false;
+        isWaveCooldown = false;
+        
+        // Запускаем первую волну
+        spawnWave(wave);
+    }
     
     // Запускаем игровой цикл
     gameLoop();

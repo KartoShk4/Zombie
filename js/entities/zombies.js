@@ -101,13 +101,24 @@ function spawnWave(wave) {
         }
     ];
 
-    // Если волна уже активна или идет перерыв, не спавним
-    if (isWaveActive || isWaveCooldown) return;
-
-    isWaveActive = true;
+    // Устанавливаем флаг активности волны (если переменная доступна)
+    // ВАЖНО: Проверка isWaveActive/isWaveCooldown убрана, чтобы не блокировать спавн
+    // Управление этими флагами должно происходить в main.js
+    if (typeof isWaveActive !== 'undefined') {
+        isWaveActive = true;
+    }
 
     const SAFE_RADIUS = 200;  // Безопасная зона вокруг игрока
-    const count = config.wave.baseZombies + wave;  // Количество зомби
+    
+    // Проверяем доступность config
+    if (typeof config === 'undefined' || !config.wave || typeof config.wave.baseZombies === 'undefined') {
+        console.error('Конфигурация волны недоступна! Используем значение по умолчанию: 5');
+        var count = 5 + wave;
+    } else {
+        var count = config.wave.baseZombies + wave;  // Количество зомби
+    }
+    
+    console.log(`Спавн волны ${wave}, количество зомби: ${count}`);
 
     // Определяем доступные типы в зависимости от волны
     let availableTypes = [...baseTypes];
@@ -132,21 +143,33 @@ function spawnWave(wave) {
         let attempts = 0;
 
         // Ищем безопасную позицию (не слишком близко к игроку)
+        // Определяем размеры мира
+        const worldWidth = typeof WORLD_WIDTH !== 'undefined' ? WORLD_WIDTH : 3000;
+        const worldHeight = typeof WORLD_HEIGHT !== 'undefined' ? WORLD_HEIGHT : 3000;
+        
         do {
-            x = Math.random() * WORLD_WIDTH;
-            y = Math.random() * WORLD_HEIGHT;
+            x = Math.random() * worldWidth;
+            y = Math.random() * worldHeight;
 
-            const dx = x - player.x;
-            const dy = y - player.y;
-            const dist = Math.hypot(dx, dy);
+            // Проверяем расстояние до игрока (если игрок доступен)
+            if (typeof player !== 'undefined' && player && typeof player.x === 'number' && typeof player.y === 'number') {
+                const dx = x - player.x;
+                const dy = y - player.y;
+                const dist = Math.hypot(dx, dy);
 
-            if (dist > SAFE_RADIUS) break;  // Нашли безопасную позицию
+                if (dist > SAFE_RADIUS) {
+                    break;  // Нашли безопасную позицию
+                }
+            } else {
+                // Если player недоступен, используем первую случайную позицию
+                break;
+            }
 
             attempts++;
         } while (attempts < 50);
 
         // Создаем зомби с уникальными характеристиками
-        zombies.push({
+        const zombie = {
             id: nextZombieId++,
             size: t.size,
             width: t.size,
@@ -165,8 +188,37 @@ function spawnWave(wave) {
             hasWounds: t.hasWounds,
             woundCount: t.hasWounds ? Math.floor(Math.random() * 3) + 1 : 0,  // Количество ран
             type: t.name
-        });
+        };
+        
+        // ВРЕМЕННО ОТКЛЮЧЕНО: Применение сложности к зомби
+        // Применяем сложность к зомби (если функция доступна)
+        // ВАЖНО: Если функция недоступна или вызывает ошибку, просто добавляем зомби без изменений
+        // if (typeof applyDifficultyToZombie === 'function') {
+        //     try {
+        //         const modifiedZombie = applyDifficultyToZombie(zombie);
+        //         // Проверяем, что функция вернула валидный объект
+        //         if (modifiedZombie && typeof modifiedZombie === 'object' && modifiedZombie.id !== undefined) {
+        //             zombies.push(modifiedZombie);
+        //         } else {
+        //             // Если функция вернула невалидный объект, добавляем исходного зомби
+        //             console.warn('applyDifficultyToZombie вернула невалидный объект, используем исходного зомби');
+        //             zombies.push(zombie);
+        //         }
+        //     } catch (error) {
+        //         // В случае ошибки добавляем исходного зомби
+        //         console.error('Ошибка при применении сложности к зомби:', error);
+        //         zombies.push(zombie);
+        //     }
+        // } else {
+        //     // Если функция недоступна, просто добавляем зомби без применения сложности
+        //     zombies.push(zombie);
+        // }
+        
+        // Временно добавляем зомби без применения сложности
+        zombies.push(zombie);
     }
+    
+    console.log(`Волна ${wave} создана, зомби в массиве: ${zombies.length}`);
 }
 
 // ===== ОБНОВЛЕНИЕ ЗОМБИ =====
