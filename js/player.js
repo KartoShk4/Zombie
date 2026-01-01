@@ -20,6 +20,8 @@ function damagePlayer(amount) {
         player.health = 0;
         gameOver();
     }
+    cameraShake = cameraShakePower;
+
 }
 
 
@@ -47,6 +49,15 @@ function updatePlayer() {
     if (player.x > canvas.width - player.width / 2) player.x = canvas.width - player.width / 2;
     if (player.y < player.height / 2) player.y = player.height / 2;
     if (player.y > canvas.height - player.height / 2) player.y = canvas.height - player.height / 2;
+
+    if (Math.random() < 0.1) {
+        footprints.push({
+            x: player.x,
+            y: player.y,
+            alpha: 1
+        });
+    }
+
 }
 
 

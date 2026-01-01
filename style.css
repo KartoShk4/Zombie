@@ -1,10 +1,42 @@
-html, body {
-    margin:0;
-    padding:0;
-    overflow:hidden;
-    touch-action:none;
+.menu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    color: white;
 }
-canvas {
-    display:block;
-    background:#000;
+
+.hidden {
+    display: none;
+}
+
+.title {
+    font-size: 32px;
+    margin-bottom: 40px;
+    text-shadow: 4px 4px black;
+}
+
+.menu-btn {
+    display: block;
+    width: 260px;
+    padding: 15px;
+    margin: 10px auto;
+    font-size: 18px;
+    font-family: 'Press Start 2P', monospace;
+    background: #222;
+    color: #fff;
+    border: 4px solid #555;
+    cursor: pointer;
+    text-shadow: 2px 2px black;
+}
+
+.menu-btn:hover {
+    background: #444;
+}
+
+.text {
+    font-size: 16px;
+    margin-bottom: 20px;
 }

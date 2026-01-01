@@ -8,6 +8,32 @@
 </head>
 <body>
 
+<div id="main-menu" class="menu">
+    <h1 class="title">ZOMBIE SURVIVE</h1>
+
+    <button class="menu-btn" onclick="startGame()">▶ Старт</button>
+    <button class="menu-btn" onclick="openSettings()">⚙ Настройки</button>
+    <button class="menu-btn" onclick="openHowToPlay()">❓ Как играть</button>
+</div>
+
+<div id="settings-menu" class="menu hidden">
+    <h2 class="title">Настройки</h2>
+    <button class="menu-btn" onclick="closeSettings()">Назад</button>
+</div>
+
+<div id="howto-menu" class="menu hidden">
+    <h2 class="title">Как играть</h2>
+    <p class="text">• Двигайся левым джойстиком<br>• Стреляй правым<br>• Выживи как можно дольше</p>
+    <button class="menu-btn" onclick="closeHowToPlay()">Назад</button>
+</div>
+
+<div id="game-over" class="menu hidden">
+    <h1 class="title">GAME OVER</h1>
+    <p id="final-score" class="text"></p>
+    <button class="menu-btn" onclick="restartGame()">Перезапуск</button>
+</div>
+
+
 <div id="rotate-warning" style="
     position: fixed;
     top: 0; left: 0;

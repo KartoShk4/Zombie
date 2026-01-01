@@ -6,6 +6,8 @@ let zombiesPerWave = 5;
 // сколько пуль в секунду можно выпускать
 let fireRate = 5;
 let lastShotTime = 0;
+muzzleFlash = 3;
+
 
 
 function tryShootBullet(dx, dy) {

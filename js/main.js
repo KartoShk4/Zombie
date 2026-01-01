@@ -1,3 +1,30 @@
+let gameStarted = false;
+
+function startGame() {
+    document.getElementById("main-menu").classList.add("hidden");
+    gameStarted = true;
+}
+
+function openSettings() {
+    document.getElementById("main-menu").classList.add("hidden");
+    document.getElementById("settings-menu").classList.remove("hidden");
+}
+
+function closeSettings() {
+    document.getElementById("settings-menu").classList.add("hidden");
+    document.getElementById("main-menu").classList.remove("hidden");
+}
+
+function openHowToPlay() {
+    document.getElementById("main-menu").classList.add("hidden");
+    document.getElementById("howto-menu").classList.remove("hidden");
+}
+
+function closeHowToPlay() {
+    document.getElementById("howto-menu").classList.add("hidden");
+    document.getElementById("main-menu").classList.remove("hidden");
+}
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -5,14 +32,54 @@ const ctx = canvas.getContext("2d");
 let isMouseDown = false;
 let mouseAim = {x: 0, y: 0};
 
+
+let muzzleFlash = 0;
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+
+let footprints = [];
 
 let wave = 1;
 let isWaveActive = false;
 let isWaveCooldown = false;
 let waveCooldownTime = 3; // секунды
 let waveTimer = 0;
+let lightFlicker = 1;
+let cameraShake = 0;
+let cameraShakePower = 8;
+
+
+function renderFootprints(ctx) {
+    footprints.forEach(f => {
+        ctx.save();
+        ctx.globalAlpha = f.alpha;
+        ctx.fillStyle = "#3a3a3a";
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        f.alpha -= 0.005;
+    });
+
+    footprints = footprints.filter(f => f.alpha > 0);
+}
+
+function renderVignette(ctx) {
+    let gradient = ctx.createRadialGradient(
+        canvas.width / 2, canvas.height / 2, canvas.width * 0.2,
+        canvas.width / 2, canvas.height / 2, canvas.width * 0.7
+    );
+
+    gradient.addColorStop(0, "rgba(0,0,0,0)");
+    gradient.addColorStop(1, "rgba(0,0,0,0.6)");
+
+    ctx.save();
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+}
+
 
 function checkOrientation() {
     const warning = document.getElementById("rotate-warning");
@@ -90,11 +157,67 @@ function update() {
         playerHitCooldown -= 1 / 60;
         if (playerHitCooldown < 0) playerHitCooldown = 0;
     }
+
+    lightFlicker = 0.9 + Math.random() * 0.2;
+
 }
+
+// Туман
+function renderFog(ctx) {
+    ctx.save();
+    ctx.fillStyle = "rgba(200, 200, 200, 0.15)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+}
+
+// Пиксельный HUD
+function renderHUD(ctx) {
+    ctx.save();
+    ctx.font = "20px 'Press Start 2P'";
+    ctx.fillStyle = "white";
+    ctx.textBaseline = "top";
+
+    ctx.fillText("HP: " + player.health, 20, 20);
+    ctx.fillText("Wave: " + wave, 20, 50);
+    ctx.fillText("Score: " + score, 20, 80);
+
+    ctx.restore();
+}
+
 
 
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#2b2b2b"; // тёмно-серый пиксельный фон
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+
+    renderFog(ctx);
+
+    ctx.save();
+    ctx.globalAlpha = lightFlicker;
+
+    if (cameraShake > 0) {
+        const shakeX = (Math.random() - 0.5) * cameraShake;
+        const shakeY = (Math.random() - 0.5) * cameraShake;
+        ctx.translate(shakeX, shakeY);
+        cameraShake *= 0.9;
+    }
+
+    if (muzzleFlash > 0) {
+        ctx.save();
+        ctx.globalAlpha = muzzleFlash / 3;
+        ctx.fillStyle = "rgba(255, 255, 150, 0.8)";
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, 40, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        muzzleFlash -= 0.3;
+    }
+
+    renderFootprints(ctx);
+
 
     renderBlood(ctx);
     renderPlayer(ctx);
@@ -124,10 +247,19 @@ function render() {
     ctx.arc(aimJoystick.stickX, aimJoystick.stickY, aimJoystick.radius / 2, 0, Math.PI * 2);
     ctx.fill();
 
+    renderVignette(ctx);
+
+    ctx.restore();
 }
 
 
 function gameLoop() {
+    if (!gameStarted) {
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
+
     update();
 
     // стрельба мышью — автоогонь, но с ограниченным темпом
@@ -145,7 +277,12 @@ function gameLoop() {
 }
 
 function gameOver() {
-    alert("Game Over!");
+    gameStarted = false;
+    document.getElementById("game-over").classList.remove("hidden");
+    document.getElementById("final-score").innerText = "Счёт: " + score;
+}
+
+function restartGame() {
     location.reload();
 }
 
