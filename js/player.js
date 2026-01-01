@@ -51,6 +51,28 @@ function updatePlayer() {
 
 
 function renderPlayer(ctx) {
-    ctx.fillStyle = 'green';
-    ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+    ctx.save();
+    ctx.translate(player.x, player.y);
+
+    // тело
+    ctx.fillStyle = "#4a90e2";
+    ctx.beginPath();
+    ctx.arc(0, 0, player.width / 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // лицо
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(0, -player.height * 0.15, player.width * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // глаза
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(-player.width * 0.1, -player.height * 0.2, player.width * 0.05, 0, Math.PI * 2);
+    ctx.arc(player.width * 0.1, -player.height * 0.2, player.width * 0.05, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
 }
+

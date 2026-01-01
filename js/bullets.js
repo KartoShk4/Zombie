@@ -4,16 +4,16 @@ let zombiesKilled = 0;
 let zombiesPerWave = 5;
 
 // сколько пуль в секунду можно выпускать
-let fireRate = 5; // например, 5 выстрелов в секунду
+let fireRate = 5;
 let lastShotTime = 0;
 
 
 function tryShootBullet(dx, dy) {
-    const now = performance.now() / 1000; // время в секундах
+    const now = performance.now() / 1000;
     const timeSinceLastShot = now - lastShotTime;
 
     if (timeSinceLastShot < 1 / fireRate) {
-        return; // ещё рано стрелять
+        return;
     }
 
     lastShotTime = now;
@@ -35,30 +35,58 @@ function shootBullet(dx, dy) {
     });
 }
 
+
 function updateBullets() {
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
+
+        // движение пули
         b.x += b.dx * b.speed;
         b.y += b.dy * b.speed;
 
+        // если пуля вышла за экран — удалить
         if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
             bullets.splice(i, 1);
             continue;
         }
 
+        // проверка попадания
+        let hit = false;
+
         for (let j = zombies.length - 1; j >= 0; j--) {
             let z = zombies[j];
 
-            if (
-                b.x > z.x - z.width / 2 &&
-                b.x < z.x + z.width / 2 &&
-                b.y > z.y - z.height / 2 &&
-                b.y < z.y + z.height / 2
-            ) {
-                z.health -= config.bullet.damage;
-                bullets.splice(i, 1);
+            // круглый хитбокс
+            const dist = Math.hypot(b.x - z.x, b.y - z.y);
 
+            if (dist < z.size / 2) {
+
+                // урон
+                z.health -= config.bullet.damage;
+
+                // кровь при попадании
+                blood.push({
+                    x: z.x,
+                    y: z.y,
+                    size: Math.random() * 12 + 8,
+                    alpha: 1
+                });
+
+                // удалить пулю
+                bullets.splice(i, 1);
+                hit = true;
+
+                // смерть зомби
                 if (z.health <= 0) {
+
+                    // большая лужа крови
+                    blood.push({
+                        x: z.x,
+                        y: z.y,
+                        size: 20,
+                        alpha: 1
+                    });
+
                     zombies.splice(j, 1);
                     score++;
                     zombiesKilled++;
@@ -68,12 +96,14 @@ function updateBullets() {
                     }
                 }
 
-
-                break;
+                break; // выходим из цикла зомби
             }
         }
+
+        if (hit) continue; // выходим из обработки пули
     }
 }
+
 
 function renderBullets(ctx) {
     ctx.fillStyle = 'yellow';

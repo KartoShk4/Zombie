@@ -9,7 +9,7 @@ const config = {
     bullet: {
         radius: 3,
         speed: 10,
-        damage: 25
+        damage: 1
     },
     zombie: {
         width: 30,

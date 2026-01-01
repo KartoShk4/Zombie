@@ -96,6 +96,7 @@ function update() {
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    renderBlood(ctx);
     renderPlayer(ctx);
     renderZombies(ctx);
     renderBullets(ctx);
