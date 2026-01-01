@@ -6,20 +6,40 @@ function spawnWave(wave) {
 
     isWaveActive = true;
 
+    const SAFE_RADIUS = 200; // радиус безопасной зоны вокруг игрока
     const count = config.wave.baseZombies + wave;
 
     for (let i = 0; i < count; i++) {
+
+        let x, y;
+        let attempts = 0;
+
+        do {
+            x = Math.random() * canvas.width;
+            y = Math.random() * canvas.height;
+
+            const dx = x - player.x;
+            const dy = y - player.y;
+            const dist = Math.hypot(dx, dy);
+
+            // если слишком близко — повторяем
+            if (dist > SAFE_RADIUS) break;
+
+            attempts++;
+        } while (attempts < 50);
+
         zombies.push({
             id: nextZombieId++,
             width: config.zombie.width,
             height: config.zombie.height,
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
+            x,
+            y,
             health: config.zombie.health,
             speed: config.zombie.speed
         });
     }
 }
+
 
 
 function updateZombies() {

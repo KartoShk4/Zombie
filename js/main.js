@@ -10,6 +10,7 @@ let isWaveCooldown = false;
 let waveCooldownTime = 3; // секунды
 let waveTimer = 0;
 
+
 function startWaveCooldown() {
     isWaveActive = false;
     isWaveCooldown = true;
