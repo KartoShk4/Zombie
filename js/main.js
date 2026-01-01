@@ -17,16 +17,40 @@ let waveTimer = 0;
 function checkOrientation() {
     const warning = document.getElementById("rotate-warning");
 
-    if (window.innerHeight > window.innerWidth) {
-        // Портретный режим
+    const isPortrait =
+        window.innerHeight > window.innerWidth ||
+        (screen.orientation && screen.orientation.type.startsWith("portrait"));
+
+    if (isPortrait) {
         warning.style.display = "flex";
         canvas.style.display = "none";
     } else {
-        // Альбомный режим
         warning.style.display = "none";
         canvas.style.display = "block";
     }
 }
+
+// Проверяем ориентацию сразу после загрузки
+window.addEventListener("load", () => {
+    setTimeout(checkOrientation, 50);
+});
+
+window.addEventListener("resize", checkOrientation);
+window.addEventListener("orientationchange", checkOrientation);
+
+
+const fullscreenBtn = document.getElementById("fullscreen-btn");
+
+fullscreenBtn.addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+        fullscreenBtn.textContent = "⤢"; // кнопка "выйти"
+    } else {
+        document.exitFullscreen();
+        fullscreenBtn.textContent = "⛶"; // кнопка "войти"
+    }
+});
+
 
 function requestFullscreen() {
     if (!document.fullscreenElement) {
