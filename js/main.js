@@ -54,12 +54,14 @@ function render() {
 function gameLoop() {
     update();
 
+    // стрельба мышью — автоогонь, но с ограниченным темпом
     if (isMouseDown) {
-        shootBullet(mouseAim.x - player.x, mouseAim.y - player.y);
+        tryShootBullet(mouseAim.x - player.x, mouseAim.y - player.y);
     }
 
+    // стрельба джойстиком прицела
     if (aimJoystick.vector.x !== 0 || aimJoystick.vector.y !== 0) {
-        shootBullet(aimJoystick.vector.x, aimJoystick.vector.y);
+        tryShootBullet(aimJoystick.vector.x, aimJoystick.vector.y);
     }
 
     render();

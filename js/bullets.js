@@ -3,6 +3,24 @@ let score = 0;
 let zombiesKilled = 0;
 let zombiesPerWave = 5;
 
+// сколько пуль в секунду можно выпускать
+let fireRate = 5; // например, 5 выстрелов в секунду
+let lastShotTime = 0;
+
+
+function tryShootBullet(dx, dy) {
+    const now = performance.now() / 1000; // время в секундах
+    const timeSinceLastShot = now - lastShotTime;
+
+    if (timeSinceLastShot < 1 / fireRate) {
+        return; // ещё рано стрелять
+    }
+
+    lastShotTime = now;
+    shootBullet(dx, dy);
+}
+
+
 function shootBullet(dx, dy) {
     const dist = Math.hypot(dx, dy);
     if (dist === 0) return;
