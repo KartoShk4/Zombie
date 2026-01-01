@@ -26,8 +26,8 @@ function spawnWave(wave) {
         let attempts = 0;
 
         do {
-            x = Math.random() * canvas.width;
-            y = Math.random() * canvas.height;
+            x = Math.random() * WORLD_WIDTH;
+            y = Math.random() * WORLD_HEIGHT;
 
             const dx = x - player.x;
             const dy = y - player.y;

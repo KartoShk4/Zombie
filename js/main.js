@@ -3,12 +3,18 @@ const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAg
 let gameStarted = false;
 let camera = { x: 0, y: 0 };
 
-const WORLD_WIDTH = 3000;
-const WORLD_HEIGHT = 3000;
-
 function startGame() {
     document.getElementById("main-menu").classList.add("hidden");
+    canvas.classList.add("game-active"); // Показываем canvas
     gameStarted = true;
+    
+    // Инициализируем камеру на игрока при старте
+    camera.x = player.x - canvas.width / 2;
+    camera.y = player.y - canvas.height / 2;
+    
+    // Ограничиваем камеру
+    camera.x = Math.max(0, Math.min(camera.x, WORLD_WIDTH - canvas.width));
+    camera.y = Math.max(0, Math.min(camera.y, WORLD_HEIGHT - canvas.height));
 }
 
 function openSettings() {
@@ -45,8 +51,8 @@ canvas.height = window.innerHeight;
 
 let backgroundCanvas = document.createElement("canvas");
 let backgroundCtx = backgroundCanvas.getContext("2d");
-backgroundCanvas.width = canvas.width;
-backgroundCanvas.height = canvas.height;
+backgroundCanvas.width = WORLD_WIDTH;
+backgroundCanvas.height = WORLD_HEIGHT;
 
 let footprints = [];
 
@@ -98,12 +104,14 @@ function checkOrientation() {
         window.innerHeight > window.innerWidth ||
         (screen.orientation && screen.orientation.type.startsWith("portrait"));
 
-    if (isPortrait) {
-        warning.style.display = "flex";
-        canvas.style.display = "none";
-    } else {
-        warning.style.display = "none";
-        canvas.style.display = "block";
+    if (warning) {
+        if (isPortrait) {
+            warning.style.display = "flex";
+            canvas.style.display = "none";
+        } else {
+            warning.style.display = "none";
+            canvas.style.display = "block";
+        }
     }
 }
 
@@ -115,17 +123,7 @@ window.addEventListener("load", () => {
 window.addEventListener("resize", checkOrientation);
 window.addEventListener("orientationchange", checkOrientation);
 
-const fullscreenBtn = document.getElementById("fullscreen-btn");
-
-fullscreenBtn.addEventListener("click", () => {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-        fullscreenBtn.textContent = "⤢"; // кнопка "выйти"
-    } else {
-        document.exitFullscreen();
-        fullscreenBtn.textContent = "⛶"; // кнопка "войти"
-    }
-});
+// Удалена ссылка на несуществующий элемент fullscreen-btn
 
 function requestFullscreen() {
     if (!document.fullscreenElement) {
@@ -294,6 +292,7 @@ function gameLoop() {
 
 function gameOver() {
     gameStarted = false;
+    canvas.classList.remove("game-active"); // Скрываем canvas при game over
     document.getElementById("game-over").classList.remove("hidden");
     document.getElementById("final-score").innerText = "Счёт: " + score;
 }
@@ -365,9 +364,9 @@ window.addEventListener('resize', () => {
     backgroundCanvas.height = WORLD_HEIGHT;
     generateStaticBackground();
 
-    // Центрируем игрока (если нужно)
-    player.x = canvas.width / 2;
-    player.y = canvas.height / 2;
+    // Центрируем игрока в центре мира
+    player.x = WORLD_WIDTH / 2;
+    player.y = WORLD_HEIGHT / 2;
 
     // Левый джойстик (движение)
     joystick.baseX = 120;
@@ -384,6 +383,9 @@ window.addEventListener('resize', () => {
 
 window.onload = () => {
     generateStaticBackground();
+    // Сбрасываем флаги волны перед первым спавном
+    isWaveActive = false;
+    isWaveCooldown = false;
     spawnWave(wave);
     gameLoop();
 };

@@ -1,73 +1,100 @@
 html, body {
     margin: 0;
     padding: 0;
-    overflow: hidden; /* ← запрещает скролл */
+    overflow: hidden;
+    height: 100%;
+    font-family: 'Press Start 2P', monospace;
+    image-rendering: pixelated;
 }
 
+/* Однотонный фон */
+body {
+    background: #111;
+}
+
+/* ===== CANVAS (z-index: 1) ===== */
+
+#canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    display: none; /* Скрыт по умолчанию, показывается при старте игры */
+    background: transparent;
+}
+
+#canvas.game-active {
+    display: block;
+}
+
+/* ===== ПОЛНОЭКРАННОЕ МЕНЮ (z-index: 10) ===== */
 
 .menu {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    font-family: 'Press Start 2P', monospace;
+    position: fixed;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column; /* Явно указываем направление для центрирования */
+
+    /* Однотонный фон */
+    background: #111;
+    
+    border: none;
+    box-shadow: none;
+
     color: white;
+    opacity: 0;
+    animation: fadeIn 0.6s forwards;
+    z-index: 10;
 }
 
-.hidden {
-    display: none;
+.menu-content {
+    text-align: center;
+    position: relative;
+    z-index: 10;
+    background: transparent;
+    padding: 40px;
+    margin: auto;
 }
 
+/* Заголовок */
 .title {
     font-size: 32px;
     margin-bottom: 40px;
+    color: #ff4444;
     text-shadow: 4px 4px black;
+    letter-spacing: 2px;
 }
 
+/* Кнопки */
 .menu-btn {
     display: block;
     width: 260px;
     padding: 15px;
-    margin: 10px auto;
-    font-size: 18px;
-    font-family: 'Press Start 2P', monospace;
+    margin: 12px auto;
+
     background: #222;
-    color: #fff;
     border: 4px solid #555;
+    color: #fff;
+
+    font-size: 18px;
     cursor: pointer;
     text-shadow: 2px 2px black;
-}
 
-.menu-btn:hover {
-    background: #444;
-}
-
-.text {
-    font-size: 16px;
-    margin-bottom: 20px;
-}
-
-.menu-btn {
     transition: transform 0.1s steps(2), background 0.1s;
 }
 
-.menu-btn:hover {
-    transform: scale(1.05);
-    background: #666;
-}
+.menu-btn:hover { transform: scale(1.05); background: #444; }
+.menu-btn:active { transform: scale(0.95); background: #666; }
 
-.menu-btn:active {
-    transform: scale(0.95);
-    background: #999;
-}
+.hidden { display: none; }
 
-.menu {
-    opacity: 0;
-    animation: fadeIn 0.6s forwards;
-}
+/* CRT эффект удален */
 
+/* Анимация появления меню */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translate(-50%, -48%); }
-    to   { opacity: 1; transform: translate(-50%, -50%); }
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
 }

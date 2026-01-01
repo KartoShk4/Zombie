@@ -51,7 +51,8 @@ function updateBullets() {
         b.y += b.dy * b.speed;
 
         // если пуля вышла за экран — удалить
-        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+        if (b.x < 0 || b.x > WORLD_WIDTH || b.y < 0 || b.y > WORLD_HEIGHT)
+        {
             bullets.splice(i, 1);
             continue;
         }

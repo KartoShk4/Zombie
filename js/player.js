@@ -1,8 +1,8 @@
 let player = {
     width: config.player.width,
     height: config.player.height,
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
+    x: WORLD_WIDTH / 2,
+    y: WORLD_HEIGHT / 2,
     health: config.player.health,
     speed: config.player.speed
 };
@@ -35,12 +35,6 @@ function updatePlayer() {
     if (keys.s) player.y += player.speed;
     if (keys.a) player.x -= player.speed;
     if (keys.d) player.x += player.speed;
-
-    // === 3. Управление стрелками (альтернатива) ===
-    if (keys.ArrowUp) player.y -= player.speed;
-    if (keys.ArrowDown) player.y += player.speed;
-    if (keys.ArrowLeft) player.x -= player.speed;
-    if (keys.ArrowRight) player.x += player.speed;
 
     // === 4. Ограничения по краям экрана ===
     if (player.x < player.width / 2) player.x = player.width / 2;

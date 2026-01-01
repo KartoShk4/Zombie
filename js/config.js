@@ -1,4 +1,7 @@
 // ======== Конфигурация игры ========
+const WORLD_WIDTH = 3000;
+const WORLD_HEIGHT = 3000;
+
 const config = {
     player: {
         width: 50,
