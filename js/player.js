@@ -23,21 +23,32 @@ function damagePlayer(amount) {
 }
 
 
-
 function updatePlayer() {
+    // === 1. Управление джойстиком (телефон) ===
+    if (joystick.vector.x !== 0 || joystick.vector.y !== 0) {
+        player.x += joystick.vector.x * player.speed;
+        player.y += joystick.vector.y * player.speed;
+    }
+
+    // === 2. Управление WASD (ПК) ===
+    if (keys.w) player.y -= player.speed;
+    if (keys.s) player.y += player.speed;
+    if (keys.a) player.x -= player.speed;
+    if (keys.d) player.x += player.speed;
+
+    // === 3. Управление стрелками (альтернатива) ===
     if (keys.ArrowUp) player.y -= player.speed;
     if (keys.ArrowDown) player.y += player.speed;
     if (keys.ArrowLeft) player.x -= player.speed;
     if (keys.ArrowRight) player.x += player.speed;
 
-    player.x += joystick.vector.x * player.speed;
-    player.y += joystick.vector.y * player.speed;
-
+    // === 4. Ограничения по краям экрана ===
     if (player.x < player.width / 2) player.x = player.width / 2;
     if (player.x > canvas.width - player.width / 2) player.x = canvas.width - player.width / 2;
     if (player.y < player.height / 2) player.y = player.height / 2;
     if (player.y > canvas.height - player.height / 2) player.y = canvas.height - player.height / 2;
 }
+
 
 function renderPlayer(ctx) {
     ctx.fillStyle = 'green';

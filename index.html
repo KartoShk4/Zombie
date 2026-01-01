@@ -8,24 +8,41 @@
 </head>
 <body>
 
+<div id="rotate-warning" style="
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: #000;
+    color: #fff;
+    font-size: 24px;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+">
+    Поверните устройство в альбомный режим
+</div>
+
 <canvas id="canvas"></canvas>
 
-<!-- 1. Конфиг — нужен всем -->
+<!-- 1. Конфиг -->
 <script src="js/config.js" defer></script>
 
-<!-- 2. main.js — создаёт canvas, нужен ДО джойстиков -->
-<script src="js/main.js" defer></script>
+<!-- 2. Управление (WASD + мышь) -->
+<script src="js/input.js" defer></script>
 
-<!-- 3. Джойстики — используют canvas, поэтому идут ПОСЛЕ main.js -->
+<!-- 3. Джойстики -->
 <script src="js/joysticks.js" defer></script>
 
-<!-- 4. Остальные модули игры -->
+<!-- 4. Логика игры -->
 <script src="js/player.js" defer></script>
 <script src="js/zombies.js" defer></script>
 <script src="js/bullets.js" defer></script>
-<script src="js/input.js" defer></script>
 <script src="js/hud.js" defer></script>
 <script src="js/wave.js" defer></script>
+
+<!-- 5. main.js — ДОЛЖЕН быть ПОСЛЕДНИМ -->
+<script src="js/main.js" defer></script>
 
 </body>
 </html>

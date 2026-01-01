@@ -1,6 +1,10 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
+// Глобальные переменные управления (страховка, если input.js загрузится позже)
+let isMouseDown = false;
+let mouseAim = {x: 0, y: 0};
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -9,6 +13,32 @@ let isWaveActive = false;
 let isWaveCooldown = false;
 let waveCooldownTime = 3; // секунды
 let waveTimer = 0;
+
+function checkOrientation() {
+    const warning = document.getElementById("rotate-warning");
+
+    if (window.innerHeight > window.innerWidth) {
+        // Портретный режим
+        warning.style.display = "flex";
+        canvas.style.display = "none";
+    } else {
+        // Альбомный режим
+        warning.style.display = "none";
+        canvas.style.display = "block";
+    }
+}
+
+function requestFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            console.warn("Fullscreen blocked by browser:", err);
+        });
+    }
+}
+
+window.addEventListener("click", requestFullscreen, {once: true});
+
+checkOrientation();
 
 
 function startWaveCooldown() {
@@ -99,15 +129,23 @@ window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    // Центрируем игрока (если нужно)
     player.x = canvas.width / 2;
     player.y = canvas.height / 2;
 
-    joystick.baseY = canvas.height - 100;
-    joystick.stickY = canvas.height - 100;
+    // Левый джойстик (движение)
+    joystick.baseX = 120;
+    joystick.baseY = canvas.height - 120;
+    joystick.stickX = joystick.baseX;
+    joystick.stickY = joystick.baseY;
 
-    aimJoystick.baseY = canvas.height - 100;
-    aimJoystick.stickY = canvas.height - 100;
+    // Правый джойстик (прицел)
+    aimJoystick.baseX = canvas.width - 120;
+    aimJoystick.baseY = canvas.height - 120;
+    aimJoystick.stickX = aimJoystick.baseX;
+    aimJoystick.stickY = aimJoystick.baseY;
 });
+
 
 window.onload = () => {
     spawnWave(wave);
