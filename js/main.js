@@ -1,4 +1,10 @@
+const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+
 let gameStarted = false;
+let camera = { x: 0, y: 0 };
+
+const WORLD_WIDTH = 3000;
+const WORLD_HEIGHT = 3000;
 
 function startGame() {
     document.getElementById("main-menu").classList.add("hidden");
@@ -41,7 +47,6 @@ let backgroundCanvas = document.createElement("canvas");
 let backgroundCtx = backgroundCanvas.getContext("2d");
 backgroundCanvas.width = canvas.width;
 backgroundCanvas.height = canvas.height;
-
 
 let footprints = [];
 
@@ -162,6 +167,14 @@ function update() {
 
     lightFlicker = 0.9 + Math.random() * 0.2;
 
+    // === ОБНОВЛЕНИЕ КАМЕРЫ ===
+    camera.x = player.x - canvas.width / 2;
+    camera.y = player.y - canvas.height / 2;
+
+    // ограничиваем камеру, чтобы не выходила за мир
+    camera.x = Math.max(0, Math.min(camera.x, WORLD_WIDTH - canvas.width));
+    camera.y = Math.max(0, Math.min(camera.y, WORLD_HEIGHT - canvas.height));
+
 }
 
 // Туман
@@ -174,13 +187,16 @@ function renderFog(ctx) {
 
 function render() {
     // 1. Фон (первый слой)
-    ctx.drawImage(backgroundCanvas, 0, 0);
+    ctx.drawImage(backgroundCanvas, -camera.x, -camera.y);
 
     // 2. Туман
     renderFog(ctx);
 
     // 3. Эффекты сцены (камера, вспышка)
     ctx.save();
+
+    // смещение камеры
+    ctx.translate(-camera.x, -camera.y);
 
     // мерцание света
     ctx.globalAlpha = lightFlicker;
@@ -193,7 +209,7 @@ function render() {
         cameraShake *= 0.9;
     }
 
-    // 5. Вспышка при выстреле
+    // вспышка при выстреле
     if (muzzleFlash > 0) {
         ctx.save();
 
@@ -223,7 +239,7 @@ function render() {
     renderZombies(ctx);
     renderBullets(ctx);
 
-    ctx.restore(); // ← ВАЖНО! HUD рисуем ПОСЛЕ restore()
+    ctx.restore(); // ← HUD рисуем ПОСЛЕ restore()
 
     // 5. HUD (всегда поверх всего)
     renderHUD(ctx);
@@ -345,8 +361,8 @@ window.addEventListener('resize', () => {
     canvas.height = window.innerHeight;
 
     // пересоздаём фон
-    backgroundCanvas.width = canvas.width;
-    backgroundCanvas.height = canvas.height;
+    backgroundCanvas.width = WORLD_WIDTH;
+    backgroundCanvas.height = WORLD_HEIGHT;
     generateStaticBackground();
 
     // Центрируем игрока (если нужно)

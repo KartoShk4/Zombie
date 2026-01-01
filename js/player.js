@@ -9,7 +9,6 @@ let player = {
 
 let playerHitCooldown = 0;
 
-
 function damagePlayer(amount) {
     if (playerHitCooldown > 0) return; // ← защита от спама урона
 
@@ -23,7 +22,6 @@ function damagePlayer(amount) {
     cameraShake = cameraShakePower;
 
 }
-
 
 function updatePlayer() {
     // === 1. Управление джойстиком (телефон) ===
@@ -46,9 +44,11 @@ function updatePlayer() {
 
     // === 4. Ограничения по краям экрана ===
     if (player.x < player.width / 2) player.x = player.width / 2;
-    if (player.x > canvas.width - player.width / 2) player.x = canvas.width - player.width / 2;
+    if (player.x > WORLD_WIDTH - player.width / 2) player.x = WORLD_WIDTH - player.width / 2;
+
     if (player.y < player.height / 2) player.y = player.height / 2;
-    if (player.y > canvas.height - player.height / 2) player.y = canvas.height - player.height / 2;
+    if (player.y > WORLD_HEIGHT - player.height / 2) player.y = WORLD_HEIGHT - player.height / 2;
+
 
     if (Math.random() < 0.1) {
         footprints.push({
@@ -59,7 +59,6 @@ function updatePlayer() {
     }
 
 }
-
 
 function renderPlayer(ctx) {
     ctx.save();
