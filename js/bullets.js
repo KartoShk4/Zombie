@@ -1,14 +1,11 @@
 let bullets = [];
 let score = 0;
 let zombiesKilled = 0;
-let zombiesPerWave = 5;
+muzzleFlash = 3;
 
 // сколько пуль в секунду можно выпускать
 let fireRate = 5;
 let lastShotTime = 0;
-muzzleFlash = 3;
-
-
 
 function tryShootBullet(dx, dy) {
     const now = performance.now() / 1000;
@@ -22,21 +19,28 @@ function tryShootBullet(dx, dy) {
     shootBullet(dx, dy);
 }
 
-
 function shootBullet(dx, dy) {
     const dist = Math.hypot(dx, dy);
     if (dist === 0) return;
 
+    lastShotAngle = Math.atan2(dy, dx);
+
+    const muzzleOffset = 30; // расстояние до дула
+
+    const spawnX = player.x + Math.cos(lastShotAngle) * muzzleOffset;
+    const spawnY = player.y + Math.sin(lastShotAngle) * muzzleOffset;
+
     bullets.push({
-        x: player.x,
-        y: player.y,
+        x: spawnX,
+        y: spawnY,
         radius: config.bullet.radius,
         speed: config.bullet.speed,
         dx: dx / dist,
         dy: dy / dist
     });
-}
 
+    muzzleFlash = 3;
+}
 
 function updateBullets() {
     for (let i = bullets.length - 1; i >= 0; i--) {
@@ -105,7 +109,6 @@ function updateBullets() {
         if (hit) continue; // выходим из обработки пули
     }
 }
-
 
 function renderBullets(ctx) {
     ctx.fillStyle = 'yellow';

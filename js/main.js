@@ -32,11 +32,16 @@ const ctx = canvas.getContext("2d");
 let isMouseDown = false;
 let mouseAim = {x: 0, y: 0};
 
-
 let muzzleFlash = 0;
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+
+let backgroundCanvas = document.createElement("canvas");
+let backgroundCtx = backgroundCanvas.getContext("2d");
+backgroundCanvas.width = canvas.width;
+backgroundCanvas.height = canvas.height;
+
 
 let footprints = [];
 
@@ -48,6 +53,7 @@ let waveTimer = 0;
 let lightFlicker = 1;
 let cameraShake = 0;
 let cameraShakePower = 8;
+let lastShotAngle = 0;
 
 
 function renderFootprints(ctx) {
@@ -80,7 +86,6 @@ function renderVignette(ctx) {
     ctx.restore();
 }
 
-
 function checkOrientation() {
     const warning = document.getElementById("rotate-warning");
 
@@ -105,7 +110,6 @@ window.addEventListener("load", () => {
 window.addEventListener("resize", checkOrientation);
 window.addEventListener("orientationchange", checkOrientation);
 
-
 const fullscreenBtn = document.getElementById("fullscreen-btn");
 
 fullscreenBtn.addEventListener("click", () => {
@@ -118,7 +122,6 @@ fullscreenBtn.addEventListener("click", () => {
     }
 });
 
-
 function requestFullscreen() {
     if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(err => {
@@ -130,7 +133,6 @@ function requestFullscreen() {
 window.addEventListener("click", requestFullscreen, {once: true});
 
 checkOrientation();
-
 
 function startWaveCooldown() {
     isWaveActive = false;
@@ -170,34 +172,20 @@ function renderFog(ctx) {
     ctx.restore();
 }
 
-// Пиксельный HUD
-function renderHUD(ctx) {
-    ctx.save();
-    ctx.font = "20px 'Press Start 2P'";
-    ctx.fillStyle = "white";
-    ctx.textBaseline = "top";
-
-    ctx.fillText("HP: " + player.health, 20, 20);
-    ctx.fillText("Wave: " + wave, 20, 50);
-    ctx.fillText("Score: " + score, 20, 80);
-
-    ctx.restore();
-}
-
-
-
 function render() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 1. Фон (первый слой)
+    ctx.drawImage(backgroundCanvas, 0, 0);
 
-    ctx.fillStyle = "#2b2b2b"; // тёмно-серый пиксельный фон
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-
+    // 2. Туман
     renderFog(ctx);
 
+    // 3. Эффекты сцены (камера, вспышка)
     ctx.save();
+
+    // мерцание света
     ctx.globalAlpha = lightFlicker;
 
+    // дрожание камеры
     if (cameraShake > 0) {
         const shakeX = (Math.random() - 0.5) * cameraShake;
         const shakeY = (Math.random() - 0.5) * cameraShake;
@@ -205,27 +193,42 @@ function render() {
         cameraShake *= 0.9;
     }
 
+    // 5. Вспышка при выстреле
     if (muzzleFlash > 0) {
         ctx.save();
+
+        ctx.translate(player.x, player.y);
+        ctx.rotate(lastShotAngle);
+
         ctx.globalAlpha = muzzleFlash / 3;
-        ctx.fillStyle = "rgba(255, 255, 150, 0.8)";
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, 40, 0, Math.PI * 2);
-        ctx.fill();
+
+        ctx.fillStyle = "#ffe066";
+        ctx.fillRect(25, -4, 16, 8);
+
+        ctx.fillStyle = "#ffea99";
+        ctx.fillRect(35, -2, 10, 4);
+
+        ctx.fillStyle = "#ffd42a";
+        ctx.fillRect(20, -6, 8, 12);
+
         ctx.restore();
+
         muzzleFlash -= 0.3;
     }
 
+    // 4. Следы, кровь, игрок, зомби, пули
     renderFootprints(ctx);
-
-
     renderBlood(ctx);
     renderPlayer(ctx);
     renderZombies(ctx);
     renderBullets(ctx);
+
+    ctx.restore(); // ← ВАЖНО! HUD рисуем ПОСЛЕ restore()
+
+    // 5. HUD (всегда поверх всего)
     renderHUD(ctx);
 
-    // Левый джойстик
+    // 6. Джойстики
     ctx.fillStyle = 'rgba(116,116,116,0.3)';
     ctx.beginPath();
     ctx.arc(joystick.baseX, joystick.baseY, joystick.radius, 0, Math.PI * 2);
@@ -236,7 +239,6 @@ function render() {
     ctx.arc(joystick.stickX, joystick.stickY, joystick.radius / 2, 0, Math.PI * 2);
     ctx.fill();
 
-// Правый джойстик
     ctx.fillStyle = 'rgba(116,116,116,0.3)';
     ctx.beginPath();
     ctx.arc(aimJoystick.baseX, aimJoystick.baseY, aimJoystick.radius, 0, Math.PI * 2);
@@ -247,11 +249,9 @@ function render() {
     ctx.arc(aimJoystick.stickX, aimJoystick.stickY, aimJoystick.radius / 2, 0, Math.PI * 2);
     ctx.fill();
 
+    // 7. Виньетка (самый верхний слой)
     renderVignette(ctx);
-
-    ctx.restore();
 }
-
 
 function gameLoop() {
     if (!gameStarted) {
@@ -286,10 +286,68 @@ function restartGame() {
     location.reload();
 }
 
+function generateStaticBackground() {
+    const ctx = backgroundCtx;
+    const w = backgroundCanvas.width;
+    const h = backgroundCanvas.height;
+
+    // === БАЗОВЫЙ ГРАДИЕНТ ЗЕМЛИ ===
+    const grd = ctx.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, "#5c8a3e");
+    grd.addColorStop(1, "#4f6b32");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, w, h);
+
+    // === МЯГКИЕ ПЯТНА ТРАВЫ ===
+    for (let i = 0; i < 200; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const r = 20 + Math.random() * 40;
+
+        ctx.fillStyle = `rgba(80, 120, 50, ${0.05 + Math.random() * 0.05})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // === ПЯТНА ЗЕМЛИ ===
+    for (let i = 0; i < 150; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const r = 15 + Math.random() * 30;
+
+        ctx.fillStyle = `rgba(90, 70, 40, ${0.05 + Math.random() * 0.05})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // === КАМНИ ===
+    for (let i = 0; i < 80; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const r = 6 + Math.random() * 10;
+
+        ctx.fillStyle = `rgba(120, 120, 120, ${0.2 + Math.random() * 0.2})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(200, 200, 200, 0.2)`;
+        ctx.beginPath();
+        ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
 
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+
+    // пересоздаём фон
+    backgroundCanvas.width = canvas.width;
+    backgroundCanvas.height = canvas.height;
+    generateStaticBackground();
 
     // Центрируем игрока (если нужно)
     player.x = canvas.width / 2;
@@ -308,8 +366,8 @@ window.addEventListener('resize', () => {
     aimJoystick.stickY = aimJoystick.baseY;
 });
 
-
 window.onload = () => {
+    generateStaticBackground();
     spawnWave(wave);
     gameLoop();
 };

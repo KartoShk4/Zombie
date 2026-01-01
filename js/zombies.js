@@ -65,15 +65,42 @@ function updateZombies() {
 
         if (dist === 0) continue;
 
-        // движение к игроку
-        z.x += (dx / dist) * z.speed;
-        z.y += (dy / dist) * z.speed;
+        // === 1. ОТТАЛКИВАНИЕ ЗОМБИ ДРУГ ОТ ДРУГА ===
+        for (let other of zombies) {
+            if (other === z) continue;
 
-        // анимация шага (покачивание)
+            const dx2 = z.x - other.x;
+            const dy2 = z.y - other.y;
+            const dist2 = Math.hypot(dx2, dy2);
+
+            const minDistZ = (z.width / 2 + other.width / 2) * 0.8;
+
+            if (dist2 < minDistZ && dist2 > 0) {
+                const push = (minDistZ - dist2) * 0.05;
+                z.x += (dx2 / dist2) * push;
+                z.y += (dy2 / dist2) * push;
+            }
+        }
+
+        // === 2. ПОДХОД К ИГРОКУ (с ограничением дистанции) ===
+        const minDist = (player.width / 2 + z.width / 2) * 0.7;
+
+        if (dist > minDist) {
+            // зомби двигается к игроку
+            z.x += (dx / dist) * z.speed;
+            z.y += (dy / dist) * z.speed;
+        } else {
+            // зомби слишком близко — слегка отталкиваем назад
+            const push = (minDist - dist) * 0.1;
+            z.x -= (dx / dist) * push;
+            z.y -= (dy / dist) * push;
+        }
+
+        // === 3. АНИМАЦИЯ ШАГА ===
         z.step += 0.1;
         z.y += Math.sin(z.step) * 0.3;
 
-        // столкновение с игроком
+        // === 4. УРОН ИГРОКУ ===
         if (dist < (player.width / 2 + z.width / 2)) {
             if (hitsThisFrame < MAX_HITS_PER_FRAME) {
                 damagePlayer(z.damage);
