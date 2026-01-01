@@ -7,6 +7,23 @@ let player = {
     speed: config.player.speed
 };
 
+let playerHitCooldown = 0;
+
+
+function damagePlayer(amount) {
+    if (playerHitCooldown > 0) return; // ← защита от спама урона
+
+    player.health -= amount;
+    playerHitCooldown = config.zombie.hitCooldown;
+
+    if (player.health <= 0) {
+        player.health = 0;
+        gameOver();
+    }
+}
+
+
+
 function updatePlayer() {
     if (keys.ArrowUp) player.y -= player.speed;
     if (keys.ArrowDown) player.y += player.speed;

@@ -23,14 +23,21 @@ function update() {
     updateBullets();
 
     if (isWaveCooldown) {
-        waveTimer -= 1 / 60; // 60 FPS
+        waveTimer -= 1 / 60;
         if (waveTimer <= 0) {
             isWaveCooldown = false;
             wave++;
             spawnWave(wave);
         }
     }
+
+    // кулдаун урона игроку
+    if (playerHitCooldown > 0) {
+        playerHitCooldown -= 1 / 60;
+        if (playerHitCooldown < 0) playerHitCooldown = 0;
+    }
 }
+
 
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -51,6 +58,7 @@ function render() {
     ctx.fill();
 }
 
+
 function gameLoop() {
     update();
 
@@ -67,6 +75,12 @@ function gameLoop() {
     render();
     requestAnimationFrame(gameLoop);
 }
+
+function gameOver() {
+    alert("Game Over!");
+    location.reload();
+}
+
 
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;

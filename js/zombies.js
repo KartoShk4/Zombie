@@ -35,7 +35,8 @@ function spawnWave(wave) {
             x,
             y,
             health: config.zombie.health,
-            speed: config.zombie.speed
+            speed: config.zombie.speed,
+            damage: config.zombie.damage,
         });
     }
 }
@@ -43,16 +44,30 @@ function spawnWave(wave) {
 
 
 function updateZombies() {
+    let hitsThisFrame = 0;
+    const MAX_HITS_PER_FRAME = 1;
+
     for (let z of zombies) {
         const dx = player.x - z.x;
         const dy = player.y - z.y;
         const dist = Math.hypot(dx, dy);
+
         if (dist === 0) continue;
 
+        // движение
         z.x += (dx / dist) * z.speed;
         z.y += (dy / dist) * z.speed;
+
+        // проверка столкновения с игроком
+        if (dist < (player.width / 2 + z.width / 2)) {
+            if (hitsThisFrame < MAX_HITS_PER_FRAME) {
+                damagePlayer(z.damage);
+                hitsThisFrame++;
+            }
+        }
     }
 }
+
 
 function renderZombies(ctx) {
     ctx.fillStyle = 'purple';
