@@ -47,7 +47,8 @@ function render() {
     renderBullets(ctx);
     renderHUD(ctx);
 
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    // Левый джойстик
+    ctx.fillStyle = 'rgba(116,116,116,0.3)';
     ctx.beginPath();
     ctx.arc(joystick.baseX, joystick.baseY, joystick.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -56,6 +57,18 @@ function render() {
     ctx.beginPath();
     ctx.arc(joystick.stickX, joystick.stickY, joystick.radius / 2, 0, Math.PI * 2);
     ctx.fill();
+
+// Правый джойстик
+    ctx.fillStyle = 'rgba(116,116,116,0.3)';
+    ctx.beginPath();
+    ctx.arc(aimJoystick.baseX, aimJoystick.baseY, aimJoystick.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.arc(aimJoystick.stickX, aimJoystick.stickY, aimJoystick.radius / 2, 0, Math.PI * 2);
+    ctx.fill();
+
 }
 
 
@@ -96,5 +109,7 @@ window.addEventListener('resize', () => {
     aimJoystick.stickY = canvas.height - 100;
 });
 
-spawnWave(wave);
-gameLoop();
+window.onload = () => {
+    spawnWave(wave);
+    gameLoop();
+};

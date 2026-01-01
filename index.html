@@ -7,15 +7,25 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <canvas id="canvas"></canvas>
-<script src="js/config.js"></script>
-<script src="js/player.js"></script>
-<script src="js/zombies.js"></script>
-<script src="js/bullets.js"></script>
-<script src="js/input.js"></script>
-<script src="js/joysticks.js"></script>
-<script src="js/hud.js"></script>
-<script src="js/wave.js"></script>
-<script src="js/main.js"></script>
+
+<!-- 1. Конфиг — нужен всем -->
+<script src="js/config.js" defer></script>
+
+<!-- 2. main.js — создаёт canvas, нужен ДО джойстиков -->
+<script src="js/main.js" defer></script>
+
+<!-- 3. Джойстики — используют canvas, поэтому идут ПОСЛЕ main.js -->
+<script src="js/joysticks.js" defer></script>
+
+<!-- 4. Остальные модули игры -->
+<script src="js/player.js" defer></script>
+<script src="js/zombies.js" defer></script>
+<script src="js/bullets.js" defer></script>
+<script src="js/input.js" defer></script>
+<script src="js/hud.js" defer></script>
+<script src="js/wave.js" defer></script>
+
 </body>
 </html>
