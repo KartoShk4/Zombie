@@ -264,6 +264,26 @@ function updateZombies() {
             // Зомби двигается к игроку
             z.x += (dx / dist) * z.speed;
             z.y += (dy / dist) * z.speed;
+            
+            // Создаем следы при движении зомби
+            if (Math.random() < 0.08) {  // Реже чем у игрока
+                const moveAngle = Math.atan2(dy, dx);
+                const footOffset = (typeof zombieFootprints !== 'undefined' && zombieFootprints.length % 2 === 0 ? -1 : 1) * z.width * 0.15;
+                const perpAngle = moveAngle + Math.PI / 2;
+                const footX = Math.cos(perpAngle) * footOffset;
+                const footY = Math.sin(perpAngle) * footOffset;
+                
+                if (typeof zombieFootprints !== 'undefined') {
+                    zombieFootprints.push({
+                        x: z.x + footX,
+                        y: z.y + footY + z.height * 0.2,
+                        alpha: 0.6,  // Более темные следы
+                        size: 6 + Math.random() * 2,  // Немного меньше следов игрока
+                        rotation: moveAngle + Math.PI / 2,
+                        isZombie: true  // Флаг для отличия от следов игрока
+                    });
+                }
+            }
         } else {
             // Зомби слишком близко — слегка отталкиваем назад
             const push = (minDist - dist) * 0.1;

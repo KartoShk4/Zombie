@@ -46,8 +46,20 @@ body {
     align-items: center;
     flex-direction: column; /* Явно указываем направление для центрирования */
 
-    /* Однотонный фон */
-    background: #111;
+    /* Оформленный фон главного меню */
+    background: 
+        radial-gradient(circle at 20% 30%, rgba(139, 0, 0, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(100, 0, 0, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(50, 0, 0, 0.1) 0%, transparent 70%),
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(139, 0, 0, 0.03) 2px,
+            rgba(139, 0, 0, 0.03) 4px
+        ),
+        #0a0a0a;
+    background-size: 100% 100%, 100% 100%, 100% 100%, 20px 20px;
     
     border: none;
     box-shadow: none;
@@ -56,6 +68,25 @@ body {
     opacity: 0;
     animation: fadeIn 0.6s forwards;
     z-index: 10;
+}
+
+/* Анимация для фона меню */
+@keyframes menuPulse {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.menu::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(139, 0, 0, 0.1) 0%, transparent 70%);
+    animation: menuPulse 3s ease-in-out infinite;
+    pointer-events: none;
 }
 
 /* Контент меню - центрированный блок */

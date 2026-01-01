@@ -135,5 +135,30 @@ function resetJoystick(js) {
 canvas.addEventListener("touchstart", handleTouchStart);
 canvas.addEventListener("touchmove", handleTouchMove);
 canvas.addEventListener("touchend", handleTouchEnd);
+
+// Отключаем зум двумя пальцами при управлении джойстиками
+canvas.addEventListener("touchstart", (e) => {
+    if (e.touches.length > 1) {
+        e.preventDefault(); // Предотвращаем зум
+    }
+}, { passive: false });
+
+canvas.addEventListener("touchmove", (e) => {
+    if (e.touches.length > 1) {
+        e.preventDefault(); // Предотвращаем зум
+    }
+}, { passive: false });
+
+canvas.addEventListener("gesturestart", (e) => {
+    e.preventDefault(); // Предотвращаем жесты (зум)
+}, { passive: false });
+
+canvas.addEventListener("gesturechange", (e) => {
+    e.preventDefault(); // Предотвращаем жесты (зум)
+}, { passive: false });
+
+canvas.addEventListener("gestureend", (e) => {
+    e.preventDefault(); // Предотвращаем жесты (зум)
+}, { passive: false });
 canvas.addEventListener("touchcancel", handleTouchEnd);
 

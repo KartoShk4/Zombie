@@ -42,3 +42,6 @@ function drawPixelHeart(ctx, x, y, scale = 3) {
     }
 }
 
+
+
+

@@ -176,6 +176,7 @@ backgroundCanvas.height = WORLD_HEIGHT;
 
 // ===== ИГРОВЫЕ ДАННЫЕ =====
 let footprints = [];  // Массив следов игрока
+let zombieFootprints = [];  // Массив следов зомби
 
 // Система волн (глобальные переменные для доступа из других модулей)
 let wave = 1;                    // Текущая волна
@@ -201,6 +202,7 @@ let lastShotAngle = 0;           // Угол последнего выстрел
  * @param {CanvasRenderingContext2D} ctx - Контекст canvas
  */
 function renderFootprints(ctx) {
+    // Следы игрока
     footprints.forEach(f => {
         ctx.save();
         ctx.translate(f.x, f.y);
@@ -227,8 +229,39 @@ function renderFootprints(ctx) {
         f.alpha -= 0.003;  // Медленное исчезновение
     });
 
-    // Удаляем полностью прозрачные следы
+    // Удаляем полностью прозрачные следы игрока
     footprints = footprints.filter(f => f.alpha > 0);
+    
+    // Следы зомби (более темные, кровавые)
+    zombieFootprints.forEach(f => {
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.rotation || 0);
+        ctx.globalAlpha = f.alpha;
+        
+        const size = f.size || 6;
+        
+        // След зомби (более темный, с красноватым оттенком)
+        ctx.fillStyle = "#1a0a0a";  // Очень темный красноватый
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * 0.5, size * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Кровавые пятна (неправильной формы)
+        ctx.fillStyle = "#3a0a0a";
+        ctx.beginPath();
+        ctx.ellipse(size * 0.1, size * 0.1, size * 0.15, size * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(-size * 0.1, -size * 0.1, size * 0.12, size * 0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+        f.alpha -= 0.002;  // Медленнее исчезают
+    });
+
+    // Удаляем полностью прозрачные следы зомби
+    zombieFootprints = zombieFootprints.filter(f => f.alpha > 0);
 }
 
 /**
@@ -315,6 +348,8 @@ function update() {
         if (waveTimer <= 0) {
             isWaveCooldown = false;
             wave++;
+            // Пересоздаем фон с новым уровнем сложности
+            generateStaticBackground();
             spawnWave(wave);  // Запускаем следующую волну
         }
     }
@@ -577,51 +612,107 @@ function saveAndQuit() {
 
 /**
  * Генерация статического фона (трава, земля, камни)
+ * С каждой волной: меньше травы, больше земли, потом больше камня
  */
 function generateStaticBackground() {
     const ctx = backgroundCtx;
     const w = backgroundCanvas.width;
     const h = backgroundCanvas.height;
 
-    // === БАЗОВЫЙ ГРАДИЕНТ ЗЕМЛИ ===
+    const waveLevel = Math.min(wave || 1, 15); // Ограничиваем для плавной прогрессии
+    const progress = Math.min(waveLevel / 15, 1); // Нормализуем от 0 до 1 (0 = волна 1, 1 = волна 15+)
+    
+    // === БАЗОВЫЙ ГРАДИЕНТ (начинается с зеленого, постепенно темнеет) ===
     const grd = ctx.createLinearGradient(0, 0, 0, h);
-    grd.addColorStop(0, "#5c8a3e");  // Светло-зеленый сверху
-    grd.addColorStop(1, "#4f6b32");  // Темно-зеленый снизу
+    
+    // Начальные цвета (волна 1): зеленый, как трава
+    const startR = 85;
+    const startG = 110;
+    const startB = 60;
+    
+    // Конечные цвета (поздние волны): темная земля
+    const endR = 60;
+    const endG = 50;
+    const endB = 40;
+    
+    // Интерполяция между начальным и конечным цветом
+    const r1 = Math.floor(startR + (endR - startR) * progress);
+    const g1 = Math.floor(startG + (endG - startG) * progress);
+    const b1 = Math.floor(startB + (endB - startB) * progress);
+    
+    const r2 = Math.floor(r1 * 0.85);
+    const g2 = Math.floor(g1 * 0.85);
+    const b2 = Math.floor(b1 * 0.85);
+    
+    grd.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
+    grd.addColorStop(1, `rgb(${r2}, ${g2}, ${b2})`);
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, w, h);
 
-    // === МЯГКИЕ ПЯТНА ТРАВЫ ===
-    for (let i = 0; i < 200; i++) {
+    // === ПЯТНА ТРАВЫ (уменьшаются с каждой волной) ===
+    // Волна 1: много травы (250), поздние волны: мало (20)
+    const grassCount = Math.floor(250 - (250 - 20) * progress);
+    for (let i = 0; i < grassCount; i++) {
         const x = Math.random() * w;
         const y = Math.random() * h;
         const r = 20 + Math.random() * 40;
+        // Альфа также уменьшается с прогрессией
+        const alpha = Math.max(0.01, (0.08 + Math.random() * 0.05) * (1 - progress * 0.7));
 
-        ctx.fillStyle = `rgba(80, 120, 50, ${0.05 + Math.random() * 0.05})`;
+        // Яркий зеленый цвет травы (не меняется, но становится менее заметным из-за альфы)
+        ctx.fillStyle = `rgba(60, 130, 50, ${alpha})`;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
     }
 
-    // === ПЯТНА ЗЕМЛИ ===
-    for (let i = 0; i < 150; i++) {
+    // === ПЯТНА ЗЕМЛИ (увеличиваются с каждой волной) ===
+    // Волна 1: мало земли (80), поздние волны: много (350)
+    const dirtCount = Math.floor(80 + (350 - 80) * progress);
+    for (let i = 0; i < dirtCount; i++) {
         const x = Math.random() * w;
         const y = Math.random() * h;
         const r = 15 + Math.random() * 30;
+        // Альфа немного увеличивается
+        const alpha = 0.05 + Math.random() * 0.05 + progress * 0.03;
 
-        ctx.fillStyle = `rgba(90, 70, 40, ${0.05 + Math.random() * 0.05})`;
+        // Цвет земли темнеет с прогрессией
+        const dirtR = Math.floor(70 + progress * 30);
+        const dirtG = Math.floor(60 - progress * 15);
+        const dirtB = Math.floor(40 - progress * 10);
+        
+        ctx.fillStyle = `rgba(${dirtR}, ${dirtG}, ${dirtB}, ${alpha})`;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
     }
+    
+    // === КРОВАВЫЕ ПЯТНА (появляются с 3+ волны) ===
+    if (waveLevel >= 3) {
+        const bloodCount = (waveLevel - 2) * 5;
+        for (let i = 0; i < bloodCount; i++) {
+            const x = Math.random() * w;
+            const y = Math.random() * h;
+            const r = 10 + Math.random() * 20;
 
-    // === КАМНИ ===
-    for (let i = 0; i < 80; i++) {
+            ctx.fillStyle = `rgba(${100 + waveLevel * 5}, 0, 0, ${0.1 + Math.random() * 0.1})`;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // === КАМНИ (увеличиваются с каждой волной) ===
+    // Волна 1: мало камней (40), поздние волны: много (150)
+    const stoneCount = Math.floor(40 + (150 - 40) * progress);
+    for (let i = 0; i < stoneCount; i++) {
         const x = Math.random() * w;
         const y = Math.random() * h;
         const r = 6 + Math.random() * 10;
 
-        // Основной камень
-        ctx.fillStyle = `rgba(120, 120, 120, ${0.2 + Math.random() * 0.2})`;
+        // Основной камень (немного темнее с прогрессией)
+        const stoneGray = Math.floor(120 - progress * 20);
+        ctx.fillStyle = `rgba(${stoneGray}, ${stoneGray}, ${stoneGray}, ${0.2 + Math.random() * 0.2})`;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
