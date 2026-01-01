@@ -89,14 +89,24 @@ function shootBullet(dx, dy) {
     const dist = Math.hypot(dx, dy);
     if (dist === 0) return;  // Нет направления
 
-    // Сохраняем угол выстрела для вспышки
+    // Сохраняем угол выстрела для вспышки и пистолета
     lastShotAngle = Math.atan2(dy, dx);
 
-    const muzzleOffset = 30;  // Расстояние от центра игрока до дула
-
-    // Позиция спавна пули (перед игроком)
-    const spawnX = player.x + Math.cos(lastShotAngle) * muzzleOffset;
-    const spawnY = player.y + Math.sin(lastShotAngle) * muzzleOffset;
+    // Позиция дула пистолета (рассчитывается как в renderPlayer)
+    const w = player.width;
+    const h = player.height;
+    const armWidth = w * 0.2;
+    const gunX = w/2 - armWidth * 0.2; // Позиция относительно центра игрока (как в renderPlayer)
+    const gunY = -h * 0.1;
+    const barrelLength = 12; // Длина ствола
+    
+    // Мировые координаты дула
+    const gunWorldX = player.x + Math.cos(lastShotAngle) * gunX - Math.sin(lastShotAngle) * gunY;
+    const gunWorldY = player.y + Math.sin(lastShotAngle) * gunX + Math.cos(lastShotAngle) * gunY;
+    
+    // Позиция спавна пули (на конце ствола)
+    const spawnX = gunWorldX + Math.cos(lastShotAngle) * barrelLength;
+    const spawnY = gunWorldY + Math.sin(lastShotAngle) * barrelLength;
 
     // Создаем пулю
     bullets.push({

@@ -15,13 +15,25 @@
 <!-- Canvas игры -->
 <canvas id="canvas"></canvas>
 
+<!-- Никнейм (первый экран при входе) -->
+<div id="nickname-menu" class="menu">
+    <div class="menu-content">
+        <h2 class="title">ВВЕДИТЕ НИКНЕЙМ</h2>
+        <input type="text" id="nickname-input" class="nickname-input" maxlength="20" placeholder="Ваш никнейм">
+        <button class="menu-btn" onclick="saveNickname()">Начать игру</button>
+    </div>
+</div>
+
 <!-- Главное меню -->
-<div id="main-menu" class="menu">
+<div id="main-menu" class="menu hidden">
     <div class="menu-content">
         <h1 class="title">ZOMBIE SURVIVE</h1>
+        <p id="greeting-text" class="text" style="font-size: 12px; margin-bottom: 20px;"></p>
 
         <button class="menu-btn" id="continue-btn" onclick="startGame(true)" style="display: none;">▶ Продолжить</button>
         <button class="menu-btn" onclick="startGame(false)">▶ Новая игра</button>
+        <button class="menu-btn" onclick="openLeaderboard()">🏆 Рейтинг</button>
+        <button class="menu-btn" onclick="openAchievements()">🎖️ Достижения</button>
         <button class="menu-btn" onclick="openSettings()">⚙ Настройки</button>
         <button class="menu-btn" onclick="openHowToPlay()">❓ Как играть</button>
     </div>
@@ -84,9 +96,28 @@
     <div class="menu-content">
         <h1 class="title">ПАУЗА</h1>
         <button class="menu-btn" onclick="resumeGame()">▶ Продолжить</button>
+        <button class="menu-btn" onclick="openAchievements()">🎖️ Достижения</button>
         <button class="menu-btn" onclick="saveGame(); resumeGame();">💾 Сохранить</button>
         <button class="menu-btn" onclick="saveAndQuit()">💾 Сохранить и выйти</button>
         <button class="menu-btn" onclick="quitWithoutSave()">🚪 Выйти</button>
+    </div>
+</div>
+
+<!-- Рейтинг -->
+<div id="leaderboard-menu" class="menu hidden">
+    <div class="menu-content">
+        <h2 class="title">РЕЙТИНГ</h2>
+        <div id="leaderboard-content" class="leaderboard-content"></div>
+        <button class="menu-btn" onclick="closeLeaderboard()">Назад</button>
+    </div>
+</div>
+
+<!-- Достижения -->
+<div id="achievements-menu" class="menu hidden">
+    <div class="menu-content">
+        <h2 class="title">ДОСТИЖЕНИЯ</h2>
+        <div id="achievements-content" class="achievements-content"></div>
+        <button class="menu-btn" onclick="closeAchievements()">Назад</button>
     </div>
 </div>
 
@@ -94,6 +125,8 @@
 <!-- Конфигурация и основная логика -->
 <script src="js/core/config.js" defer></script>
 <script src="js/core/difficulty.js" defer></script>
+<script src="js/core/user.js" defer></script>
+<script src="js/core/achievements.js" defer></script>
 <script src="js/core/save.js" defer></script>
 <script src="js/core/main.js" defer></script>
 

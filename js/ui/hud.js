@@ -12,61 +12,85 @@
 function renderHUD(ctx) {
     ctx.save();
 
-    // Настройка шрифта
-    ctx.font = "16px 'Press Start 2P'";
+    // Настройка шрифта (уменьшенный для мобильных)
+    ctx.font = "10px 'Press Start 2P'";
     ctx.textBaseline = "top";
     ctx.fillStyle = "white";
 
-    // === 1. СЕРДЦЕ (ИКОНКА ЗДОРОВЬЯ) ===
-    drawPixelHeart(ctx, 20, 20, 3);
+    // === 1. СЕРДЦЕ (ИКОНКА ЗДОРОВЬЯ) - УМЕНЬШЕНО ===
+    drawPixelHeart(ctx, 15, 15, 2);
 
-    // === 2. ПОЛОСКА ЗДОРОВЬЯ ===
-    // Используем максимальное здоровье игрока (с учетом сложности)
+    // === 2. ПОЛОСКА ЗДОРОВЬЯ - УМЕНЬШЕНА ===
     const maxHP = player.maxHealth || config.player.health;
-    const hpWidth = 120;
+    const hpWidth = 80;
 
     // Рамка полоски
     ctx.fillStyle = "#000";
-    ctx.fillRect(60, 22, hpWidth + 4, 14);
+    ctx.fillRect(45, 17, hpWidth + 4, 10);
 
-    // Фон полоски (темно-красный)
+    // Фон полоски
     ctx.fillStyle = "#550000";
-    ctx.fillRect(62, 24, hpWidth, 10);
+    ctx.fillRect(47, 19, hpWidth, 6);
 
-    // Сама полоска здоровья (ярко-красный)
+    // Полоска здоровья
     ctx.fillStyle = "#ff3b3b";
-    ctx.fillRect(62, 24, (player.health / maxHP) * hpWidth, 10);
+    ctx.fillRect(47, 19, (player.health / maxHP) * hpWidth, 6);
 
-    // Текст HP (текущее/максимальное)
+    // Текст HP (компактный, ниже полоски здоровья)
     ctx.fillStyle = "white";
-    ctx.fillText(player.health + "/" + maxHP, 62, 40);
+    ctx.font = "8px 'Press Start 2P'";
+    ctx.fillText(player.health + "/" + maxHP, 47, 29);
+    ctx.font = "10px 'Press Start 2P'"; // Восстанавливаем размер шрифта
 
-    // === 3. СЧЕТ ===
-    ctx.fillText("Score: " + score, canvas.width - 200, 20);
+    // === 3. СЧЕТ И ВОЛНА (справа вверху, компактный) ===
+    ctx.fillStyle = "white";
+    ctx.textAlign = "right";
+    const rightX = canvas.width - 15; // Прямо у правого края
+    ctx.fillText("Score: " + score, rightX, 15);
+    ctx.fillText("Wave: " + wave, rightX, 30);
+    ctx.textAlign = "left";
 
-    // === 4. ВОЛНА ===
-    ctx.fillText("Wave: " + wave, canvas.width - 200, 50);
-
-    // === 5. ТАЙМЕР ВОЛНЫ ===
-    // Показываем таймер, если идет перерыв между волнами
-    if (isWaveCooldown) {
+    // === 4. ЗВАНИЕ (показывается только при получении, сверху по центру) ===
+    // Рисуем ПЕРЕД таймером, чтобы они не перекрывались
+    if (typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank) {
+        ctx.save();
         ctx.textAlign = "center";
-        ctx.font = "24px 'Press Start 2P'";
-        ctx.fillText("Next wave in " + Math.ceil(waveTimer), canvas.width / 2, 80);
+        ctx.font = "12px 'Press Start 2P'";
+        
+        // Плавное появление/исчезание
+        const alpha = Math.min(1, rankDisplayTime / 0.5);
+        ctx.globalAlpha = alpha > 0.3 ? 1 : alpha / 0.3;
+        
+        ctx.fillStyle = currentDisplayRank.color;
+        // Показываем достаточно высоко, чтобы не мешать HP (который заканчивается на ~37px)
+        // Используем Y=52 чтобы был достаточный отступ от текста HP (Y=29, высота ~10px)
+        ctx.fillText(currentDisplayRank.name, canvas.width / 2, 52);
+        ctx.restore();
+    }
+
+    // === 5. ТАЙМЕР ВОЛНЫ (компактный, ниже звания) ===
+    if (isWaveCooldown) {
+        // Проверяем, не показывается ли звание, чтобы не перекрыться
+        const rankShowing = typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank;
+        ctx.textAlign = "center";
+        ctx.font = "10px 'Press Start 2P'";
+        // Если показывается звание, сдвигаем таймер ниже, иначе показываем ниже HP
+        const timerY = rankShowing ? 67 : 43;
+        ctx.fillText("Next: " + Math.ceil(waveTimer), canvas.width / 2, timerY);
         ctx.textAlign = "left";
     }
 
-    // === 6. КНОПКА ПАУЗЫ (для мобильных) ===
+    // === 7. КНОПКА ПАУЗЫ (для мобильных, уменьшена) ===
     if (isMobile) {
-        const pauseBtnSize = 40;
-        const pauseBtnX = canvas.width - pauseBtnSize - 20;
-        const pauseBtnY = 20;
+        const pauseBtnSize = 30;
+        const pauseBtnX = canvas.width - pauseBtnSize - 15;
+        const pauseBtnY = 15;
         
         // Фон кнопки
         ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.fillRect(pauseBtnX - 5, pauseBtnY - 5, pauseBtnSize + 10, pauseBtnSize + 10);
+        ctx.fillRect(pauseBtnX - 3, pauseBtnY - 3, pauseBtnSize + 6, pauseBtnSize + 6);
         
-        // Иконка паузы (две вертикальные линии)
+        // Иконка паузы
         ctx.fillStyle = "white";
         ctx.fillRect(pauseBtnX, pauseBtnY, pauseBtnSize * 0.25, pauseBtnSize);
         ctx.fillRect(pauseBtnX + pauseBtnSize * 0.5, pauseBtnY, pauseBtnSize * 0.25, pauseBtnSize);

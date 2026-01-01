@@ -132,8 +132,55 @@ function renderPlayer(ctx) {
     const armWidth = w * 0.2;
     const armHeight = h * 0.4;
     ctx.fillStyle = "#4a90e2";
+    // Левая рука
     ctx.fillRect(-w/2 - armWidth * 0.5, -h * 0.2, armWidth, armHeight);
-    ctx.fillRect(w/2 - armWidth * 0.5, -h * 0.2, armWidth, armHeight);
+    
+    // === ПИСТОЛЕТ В ПРАВОЙ РУКЕ ===
+    const gunAngle = typeof lastShotAngle !== 'undefined' ? lastShotAngle : 0;
+    const gunX = w/2 - armWidth * 0.2; // Позиция относительно центра игрока
+    const gunY = -h * 0.1;
+    
+    ctx.save();
+    ctx.translate(gunX, gunY);
+    ctx.rotate(gunAngle);
+    
+    // Рука держит пистолет (правая рука)
+    ctx.fillStyle = "#4a90e2";
+    ctx.fillRect(-armWidth * 0.6, -armHeight * 0.1, armWidth, armHeight * 0.7);
+    
+    // Рукоятка пистолета (черная)
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(-4, 2, 7, 10);
+    
+    // Корпус пистолета (темно-серый)
+    ctx.fillStyle = "#2a2a2a";
+    ctx.fillRect(-3, -2, 10, 4);
+    
+    // Ствол пистолета (черный)
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(7, -1.5, 12, 3);
+    
+    // Детали: спусковая скоба
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(-2, 8, 6, 2);
+    
+    // Вспышка выстрела (если активна) - только на пистолете
+    if (typeof muzzleFlash !== 'undefined' && muzzleFlash > 0) {
+        const flashAlpha = Math.min(1, muzzleFlash / 3);
+        ctx.globalAlpha = flashAlpha;
+        // Яркая вспышка
+        ctx.fillStyle = "#ffd42a";
+        ctx.fillRect(19, -2.5, 8, 5);
+        ctx.fillStyle = "#ffaa00";
+        ctx.fillRect(22, -1.5, 5, 3);
+        ctx.globalAlpha = 1.0;
+    }
+    
+    ctx.restore();
+    
+    // Правая рука (часть, не держащая пистолет)
+    ctx.fillStyle = "#4a90e2";
+    ctx.fillRect(w/2 - armWidth * 0.5, -h * 0.2, armWidth, armHeight * 0.3);
 
     // === НОГИ (синие квадраты) ===
     const legWidth = w * 0.25;

@@ -147,6 +147,88 @@ body {
 /* Скрытие элементов */
 .hidden { display: none; }
 
+/* ===== НИКНЕЙМ ===== */
+.nickname-input {
+    display: block;
+    width: 240px;
+    padding: 12px;
+    margin: 20px auto;
+    background: #222;
+    border: 4px solid #555;
+    color: #fff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    text-align: center;
+}
+
+.nickname-input:focus {
+    outline: none;
+    border-color: #ff4444;
+}
+
+/* ===== РЕЙТИНГ ===== */
+.leaderboard-content {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 20px 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid #555;
+}
+
+.leaderboard-item {
+    padding: 8px;
+    margin: 4px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 10px;
+    text-align: left;
+}
+
+.leaderboard-rank {
+    display: inline-block;
+    width: 30px;
+    font-weight: bold;
+    color: #ff4444;
+}
+
+/* ===== ДОСТИЖЕНИЯ ===== */
+.achievements-content {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 20px 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid #555;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.achievement-item {
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+    font-size: 9px;
+}
+
+.achievement-item.unlocked {
+    border-color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+}
+
+.achievement-item.locked {
+    opacity: 0.5;
+    border-color: #444;
+}
+
+.achievement-icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 5px;
+}
+
 /* ===== АНИМАЦИИ ===== */
 
 /* Анимация появления меню */

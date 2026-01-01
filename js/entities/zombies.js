@@ -361,7 +361,40 @@ function renderZombies(ctx) {
             }
         }
 
-        // === ГОЛОВА (квадрат) ===
+        // === РУКИ (квадраты, тянутся к игроку) - РИСУЕМ ДО ГОЛОВЫ ===
+        const armWidth = w * 0.25;
+        const armHeight = h * 0.5;
+        ctx.fillStyle = z.bodyColor || "#4f6f4f";
+        
+        // Угол к игроку для направления рук
+        const angleToPlayer = Math.atan2(player.y - z.y, player.x - z.x);
+        const armReach = 0.3;
+        const leftArmX = -w/2 - armWidth * 0.3;
+        const rightArmX = w/2 - armWidth * 0.7;
+        const armY = -h * 0.2;
+        
+        // Левая рука
+        ctx.save();
+        ctx.translate(leftArmX + armWidth/2, armY + armHeight/2);
+        ctx.rotate(angleToPlayer - Math.PI/2);
+        ctx.fillRect(-armWidth/2, -armHeight/2, armWidth, armHeight);
+        ctx.restore();
+        
+        // Правая рука
+        ctx.save();
+        ctx.translate(rightArmX + armWidth/2, armY + armHeight/2);
+        ctx.rotate(angleToPlayer - Math.PI/2);
+        ctx.fillRect(-armWidth/2, -armHeight/2, armWidth, armHeight);
+        ctx.restore();
+
+        // === НОГИ (квадраты) - РИСУЕМ ДО ГОЛОВЫ ===
+        const legWidth = w * 0.3;
+        const legHeight = h * 0.4;
+        ctx.fillStyle = z.bodyColor || "#3a4a3a";
+        ctx.fillRect(-w * 0.3, h/2 - legHeight * 0.2, legWidth, legHeight);
+        ctx.fillRect(w * 0.3 - legWidth, h/2 - legHeight * 0.2, legWidth, legHeight);
+
+        // === ГОЛОВА (квадрат) - РИСУЕМ ПОСЛЕ РУК И НОГ ===
         const headSize = w * 0.7;
         ctx.fillStyle = z.headColor || "#3a4a3a";
         ctx.fillRect(-headSize/2, -h/2 - headSize * 0.4, headSize, headSize);
@@ -411,28 +444,6 @@ function renderZombies(ctx) {
             // Ранa на щеке
             ctx.fillRect(eyeOffsetX + eyeSize, eyeOffsetY, w * 0.1, h * 0.1);
         }
-
-        // === РУКИ (квадраты, могут быть оторваны) ===
-        const armWidth = w * 0.25;
-        const armHeight = h * 0.5;
-        ctx.fillStyle = z.bodyColor || "#4f6f4f";
-        
-        // Левая рука (может быть оторвана)
-        if (Math.random() > 0.1 || z.type === "crawler") {
-            ctx.fillRect(-w/2 - armWidth * 0.3, -h * 0.3, armWidth, armHeight);
-        }
-        
-        // Правая рука
-        if (Math.random() > 0.1) {
-            ctx.fillRect(w/2 - armWidth * 0.7, -h * 0.3, armWidth, armHeight);
-        }
-
-        // === НОГИ (квадраты) ===
-        const legWidth = w * 0.3;
-        const legHeight = h * 0.4;
-        ctx.fillStyle = z.bodyColor || "#3a4a3a";
-        ctx.fillRect(-w * 0.3, h/2 - legHeight * 0.2, legWidth, legHeight);
-        ctx.fillRect(w * 0.3 - legWidth, h/2 - legHeight * 0.2, legWidth, legHeight);
 
         // === КРОВЬ НА ОДЕЖДЕ ===
         if (z.health < z.maxHealth) {
