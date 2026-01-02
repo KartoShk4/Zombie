@@ -48,7 +48,7 @@
         <div style="margin: 30px 0;">
             <h3 style="font-size: 18px; color: #ff4444; margin-bottom: 20px;">Никнейм</h3>
             <input type="text" id="settings-nickname-input" class="nickname-input" maxlength="20" placeholder="Ваш никнейм">
-            <button class="menu-btn" onclick="saveSettingsNickname()" style="width: 200px; margin-top: 10px;">Сохранить никнейм</button>
+            <button class="menu-btn" onclick="saveSettingsNickname()" style="width: 200px; margin-top: 10px;">Сохранить</button>
         </div>
         
         <div style="margin: 30px 0;">
@@ -70,7 +70,24 @@
                 Сложный: -30% HP, +50% скорость зомби, +80% урон
             </p>
         </div>
-        
+
+        <!-- Звук -->
+        <div class="sounds-setting">
+            <h3 style="font-size: 18px; color: #ff4444; margin-bottom: 10px;">Звук</h3>
+
+            <label class="text" style="font-size: 12px; color: #aaa;">Громкость эффектов</label>
+            <input id="effects-slider" type="range" min="0" max="100" class="settings-slider pixel-slider">
+
+            <label class="text" style="font-size: 12px; color: #aaa;">Громкость музыки</label>
+            <input id="music-slider" type="range" min="0" max="100" class="settings-slider pixel-slider">
+
+            <button class="menu-btn" id="mute-btn" style="width: 220px; margin-top: 15px;">
+                🔇 Выключить звук
+            </button>
+        </div>
+
+
+
         <button class="menu-btn" onclick="closeSettings()">Назад</button>
     </div>
 </div>
@@ -193,6 +210,7 @@
 <script src="js/core/achievements.js" defer></script>
 <script src="js/core/upgrades.js" defer></script>
 <script src="js/core/save.js" defer></script>
+<script src="js/core/sound.js" defer></script>
 <script src="js/core/main.js" defer></script>
 
 <!-- Управление -->
@@ -211,6 +229,8 @@
 <!-- Интерфейс -->
 <script src="js/ui/pixel_heart.js" defer></script>
 <script src="js/ui/hud.js" defer></script>
+<script src="js/ui/settings_sound.js" defer></script>
+
 
 <!-- Игровая логика -->
 <script src="js/game/wave.js" defer></script>

@@ -105,25 +105,31 @@ function tryShootBullet() {
         if (typeof hasBuff === 'function' && typeof buffConfig !== 'undefined') {
             // Тройной выстрел (3 пули в разные стороны)
             if (hasBuff('tripleShot')) {
-                const angle = Math.atan2(dy, dx);
-                const spread = Math.PI / 6; // 30 градусов между пулями
-                shootBullet(Math.cos(angle - spread), Math.sin(angle - spread));
-                shootBullet(Math.cos(angle), Math.sin(angle));
-                shootBullet(Math.cos(angle + spread), Math.sin(angle + spread));
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+
+                shootBullet(dirX, dirY);
+                setTimeout(() => shootBullet(dirX, dirY), 70);
+                setTimeout(() => shootBullet(dirX, dirY), 140);
+                return;
             }
+
             // Множественные пули (2, 4, 6)
-            else if (hasBuff('multiShot2') || hasBuff('multiShot4') || hasBuff('multiShot6')) {
-                let bulletCount = 2;
-                if (hasBuff('multiShot4')) bulletCount = 4;
-                else if (hasBuff('multiShot6')) bulletCount = 6;
-                
-                const angle = Math.atan2(dy, dx);
-                const spread = Math.PI / (bulletCount + 1); // Распределение пуль
-                for (let i = 0; i < bulletCount; i++) {
-                    const bulletAngle = angle - (spread * (bulletCount - 1) / 2) + (spread * i);
-                    shootBullet(Math.cos(bulletAngle), Math.sin(bulletAngle));
+            if (hasBuff('multiShot2') || hasBuff('multiShot4') || hasBuff('multiShot6')) {
+                let count = 2;
+                if (hasBuff('multiShot4')) count = 4;
+                else if (hasBuff('multiShot6')) count = 6;
+
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+                const delay = 60;
+
+                for (let i = 0; i < count; i++) {
+                    setTimeout(() => shootBullet(dirX, dirY), i * delay);
                 }
+                return;
             }
+
             // Обычный выстрел
             else {
                 shootBullet(dx / dist, dy / dist);
@@ -197,6 +203,9 @@ function shootBullet(dx, dy) {
 
     // Активируем вспышку
     muzzleFlash = 3;
+
+    // Звук выстрела
+    playSound("shoot");
 }
 
 // ===== ОБНОВЛЕНИЕ ПУЛЬ =====

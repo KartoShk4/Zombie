@@ -64,6 +64,9 @@ function updateCoins(dt = 1/60) {
             if (typeof addCoins === 'function') {
                 addCoins(c.value);
             }
+
+            // Звук подбора монетки
+            playSound("coin");
             
             // Удаляем монетку
             coins.splice(i, 1);

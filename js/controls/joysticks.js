@@ -122,9 +122,10 @@ function resetJoystick(js) {
 
 // ===== ПОДКЛЮЧЕНИЕ СОБЫТИЙ =====
 // Подключаем обработчики событий к canvas
-canvas.addEventListener("touchstart", handleTouchStart);
-canvas.addEventListener("touchmove", handleTouchMove);
-canvas.addEventListener("touchend", handleTouchEnd);
+canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+
 
 // Отключаем зум двумя пальцами при управлении джойстиками
 canvas.addEventListener("touchstart", (e) => {
