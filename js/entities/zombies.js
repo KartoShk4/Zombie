@@ -223,6 +223,11 @@ function spawnWave(wave) {
         }
     }
     
+    // Сохраняем количество зомби в волне
+    if (typeof zombiesInWave !== 'undefined') {
+        zombiesInWave = zombies.length;
+    }
+    
     console.log(`Волна ${wave} создана, зомби в массиве: ${zombies.length}`);
 }
 
@@ -232,7 +237,7 @@ function spawnWave(wave) {
  * Обновление всех зомби каждый кадр
  * Обрабатывает движение, ИИ и урон игроку
  */
-function updateZombies() {
+function updateZombies(dt = 1/60) {
     let hitsThisFrame = 0;
     const MAX_HITS_PER_FRAME = 1;  // Максимум ударов за кадр
 

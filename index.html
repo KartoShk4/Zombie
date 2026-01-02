@@ -128,6 +128,33 @@
     </div>
 </div>
 
+<!-- Модальное окно возрождения -->
+<div id="revive-modal" class="menu hidden">
+    <div class="menu-content">
+        <h2 class="title">ВОЗРОЖДЕНИЕ</h2>
+        <p class="text" style="font-size: 12px; margin: 20px 0;">
+            Вы погибли! Хотите возродиться и продолжить игру?
+        </p>
+        <div style="padding: 15px; background: rgba(0, 0, 0, 0.3); border: 2px solid #555; margin: 15px 0;">
+            <p class="text" style="font-size: 11px; color: #aaa; margin-bottom: 10px;">Стоимость возрождения:</p>
+            <p class="text" style="font-size: 16px; color: #ffd700; font-weight: bold;">
+                <span id="revive-cost">0</span> 🪙
+            </p>
+            <p class="text" style="font-size: 10px; color: #888; margin-top: 10px;">
+                Ваши монеты: <span id="revive-player-coins" style="color: #ffd700;">0</span> 🪙
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+            <button class="menu-btn" id="revive-confirm-btn" style="background: #4a4; min-width: 150px;">
+                Возродиться
+            </button>
+            <button class="menu-btn" id="revive-cancel-btn" style="background: #a44; min-width: 150px;">
+                Завершить игру
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Предупреждение о новой игре -->
 <div id="new-game-warning" class="menu hidden">
     <div class="menu-content">
@@ -178,6 +205,7 @@
 <script src="js/entities/bullets.js" defer></script>
 <script src="js/entities/hearts.js" defer></script>
 <script src="js/entities/coins.js" defer></script>
+<script src="js/entities/buffs.js" defer></script>
 <script src="js/entities/obstacles.js" defer></script>
 
 <!-- Интерфейс -->

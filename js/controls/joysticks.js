@@ -38,6 +38,13 @@ function handleTouchStart(e) {
             // Преобразуем координаты касания в CSS-пиксели относительно canvas
             const x = t.clientX - rect.left;
             const y = t.clientY - rect.top;
+            
+            // Плавающий джойстик - устанавливаем базовую позицию в место касания
+            joystick.baseX = x;
+            joystick.baseY = y;
+            joystick.stickX = x;
+            joystick.stickY = y;
+            
             moveJoystick(joystick, x, y);
         }
     }

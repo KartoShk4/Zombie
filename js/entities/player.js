@@ -37,7 +37,12 @@ function damagePlayer(amount) {
     // Проверка смерти
     if (player.health <= 0) {
         player.health = 0;
-        gameOver();  // Завершение игры
+        // Показываем предложение возродиться вместо немедленного gameOver
+        if (typeof showReviveModal === 'function') {
+            showReviveModal();
+        } else {
+            gameOver();  // Если функция недоступна, завершаем игру
+        }
     }
     
     // Дрожание камеры при уроне
@@ -50,16 +55,39 @@ function damagePlayer(amount) {
  * Обновление состояния игрока каждый кадр
  * Обрабатывает движение и ограничения
  */
-function updatePlayer() {
+function updatePlayer(dt = 1/60) {
     // === 1. УПРАВЛЕНИЕ ДЖОЙСТИКОМ (МОБИЛЬНОЕ) ===
     if (joystick.vector.x !== 0 || joystick.vector.y !== 0) {
-        const newX = player.x + joystick.vector.x * player.speed;
-        const newY = player.y + joystick.vector.y * player.speed;
+        // Применяем бафф скорости передвижения
+        let currentSpeed = player.speed;
+        if (typeof hasBuff === 'function' && typeof buffConfig !== 'undefined') {
+            if (hasBuff('movementSpeed')) {
+                const level = typeof getBuffLevel === 'function' ? getBuffLevel('movementSpeed') : 1;
+                const buff = buffConfig['movementSpeed'];
+                if (buff && buff.effect) {
+                    currentSpeed = player.speed * buff.effect(level);
+                }
+            }
+        }
+        
+        // Применяем постоянное улучшение скорости
+        if (typeof getUpgradeLevel === 'function') {
+            const speedLevel = getUpgradeLevel('permanentMovementSpeed');
+            if (speedLevel > 0) {
+                const upgrade = typeof getAllUpgrades === 'function' ? getAllUpgrades().find(u => u.id === 'permanentMovementSpeed') : null;
+                if (upgrade && upgrade.effect) {
+                    currentSpeed = player.speed * upgrade.effect(speedLevel);
+                }
+            }
+        }
+        
+        const newX = player.x + joystick.vector.x * currentSpeed * dt * 60; // Нормализуем к 60 FPS
+        const newY = player.y + joystick.vector.y * currentSpeed * dt * 60;
         
         // Проверяем коллизию с препятствиями (деревьями)
         if (typeof checkObstacleCollision === 'function') {
             const playerRadius = player.width / 2;
-            if (!checkObstacleCollision(newX, newY, playerRadius)) {
+            if (!checkObstacleCollision(newX, newY, playerRadius, false)) {
                 player.x = newX;
                 player.y = newY;
             }

@@ -32,7 +32,7 @@ function spawnHeart(x, y) {
  * Обновление всех сердечек каждый кадр
  * Обрабатывает коллизию с игроком и удаление старых
  */
-function updateHearts() {
+function updateHearts(dt = 1/60) {
     for (let i = hearts.length - 1; i >= 0; i--) {
         let h = hearts[i];
         
@@ -40,7 +40,7 @@ function updateHearts() {
         h.pulse += 0.1;
         
         // Уменьшение времени жизни
-        h.lifetime -= 1 / 60;  // 60 FPS
+        h.lifetime -= dt;
         
         // Удаление истекших сердечек
         if (h.lifetime <= 0) {

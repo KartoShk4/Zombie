@@ -20,15 +20,6 @@ const UPGRADE_TYPES = {
 // ===== УЛУЧШЕНИЯ =====
 const upgrades = [
     {
-        id: UPGRADE_TYPES.FIRE_RATE,
-        name: 'Скорость стрельбы',
-        desc: 'Увеличивает скорость стрельбы',
-        icon: '⚡',
-        baseCost: 30,
-        maxLevel: 5,
-        effect: (level) => 1 + level * 0.2  // +20% за уровень
-    },
-    {
         id: UPGRADE_TYPES.RANGE,
         name: 'Дальность стрельбы',
         desc: 'Увеличивает дальность стрельбы',
@@ -36,15 +27,6 @@ const upgrades = [
         baseCost: 40,
         maxLevel: 5,
         effect: (level) => 1 + level * 0.15  // +15% за уровень
-    },
-    {
-        id: UPGRADE_TYPES.MOVEMENT_SPEED,
-        name: 'Скорость передвижения',
-        desc: 'Увеличивает скорость передвижения',
-        icon: '🏃',
-        baseCost: 35,
-        maxLevel: 5,
-        effect: (level) => 1 + level * 0.1  // +10% за уровень
     },
     {
         id: UPGRADE_TYPES.PUSH_BACK,
@@ -63,6 +45,51 @@ const upgrades = [
         baseCost: 60,
         maxLevel: 1,
         effect: (level) => level > 0 ? 2 : 1  // Количество зомби на выстрел
+    },
+    {
+        id: 'permanentMovementSpeed',
+        name: 'Скорость передвижения',
+        desc: 'Постоянно увеличивает скорость передвижения',
+        icon: '🏃',
+        baseCost: 40,
+        maxLevel: 5,
+        effect: (level) => 1 + level * 0.15  // +15% за уровень
+    },
+    {
+        id: 'permanentFireRate',
+        name: 'Скорость атаки',
+        desc: 'Постоянно увеличивает скорость атаки',
+        icon: '⚡',
+        baseCost: 50,
+        maxLevel: 5,
+        effect: (level) => 1 + level * 0.2  // +20% за уровень
+    },
+    {
+        id: 'permanentMultiShot',
+        name: 'Множественные пули',
+        desc: 'Стреляет несколькими пулями одновременно',
+        icon: '🔫',
+        baseCost: 60,
+        maxLevel: 3,
+        effect: (level) => level + 1  // 2, 3, 4 пули
+    },
+    {
+        id: 'permanentTripleShot',
+        name: 'Тройной выстрел',
+        desc: 'Стреляет 3 пулями в разные стороны',
+        icon: '🎯',
+        baseCost: 70,
+        maxLevel: 1,
+        effect: (level) => level > 0 ? 3 : 1
+    },
+    {
+        id: 'permanentRicochet',
+        name: 'Рикошет',
+        desc: 'Пули рикошетят между зомби',
+        icon: '💫',
+        baseCost: 80,
+        maxLevel: 3,
+        effect: (level) => level  // Количество рикошетов
     }
 ];
 
@@ -152,16 +179,6 @@ function buyUpgrade(upgradeId) {
  * Применить улучшения к игроку
  */
 function applyUpgrades() {
-    // Скорость стрельбы
-    if (typeof fireRate !== 'undefined') {
-        const baseFireRate = 2;
-        const fireRateLevel = getUpgradeLevel('fireRate');
-        const upgrade = upgrades.find(u => u.id === 'fireRate');
-        if (upgrade) {
-            fireRate = baseFireRate * upgrade.effect(fireRateLevel);
-        }
-    }
-    
     // Дальность стрельбы
     if (typeof config !== 'undefined' && config.bullet) {
         const baseRange = 100;
@@ -172,15 +189,7 @@ function applyUpgrades() {
         }
     }
     
-    // Скорость передвижения
-    if (typeof player !== 'undefined' && typeof config !== 'undefined') {
-        const baseSpeed = config.player.speed;
-        const speedLevel = getUpgradeLevel('movementSpeed');
-        const upgrade = upgrades.find(u => u.id === 'movementSpeed');
-        if (upgrade) {
-            player.speed = baseSpeed * upgrade.effect(speedLevel);
-        }
-    }
+    // Постоянные улучшения применяются динамически в updatePlayer
 }
 
 /**

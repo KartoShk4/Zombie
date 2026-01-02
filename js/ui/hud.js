@@ -72,10 +72,10 @@ function renderHUD(ctx) {
     ctx.fillText("Score: " + score, rightX, scoreY);
     ctx.fillText("Wave: " + wave, rightX, waveY);
     
-    // Общее количество зомби
-    if (typeof totalZombiesSpawned !== 'undefined') {
+    // Количество зомби в текущей волне
+    if (typeof zombiesInWave !== 'undefined' && zombiesInWave > 0) {
         ctx.fillStyle = "#ff6666";
-        ctx.fillText("Zombies: " + totalZombiesSpawned, rightX, zombiesY);
+        ctx.fillText("Zombies: " + zombiesInWave, rightX, zombiesY);
     }
     
     // Монетки (золотым цветом)
@@ -85,6 +85,50 @@ function renderHUD(ctx) {
     }
     
     ctx.textAlign = "left";
+    
+    // === 9. АКТИВНЫЕ БАФФЫ (слева внизу, выше джойстика) ===
+    if (typeof activeBuffs !== 'undefined' && typeof getBuffConfig === 'function') {
+        const cssH = canvas.clientHeight || window.innerHeight;
+        let buffY = cssH - 100; // Выше джойстика
+        
+        for (let buffId in activeBuffs) {
+            const buff = activeBuffs[buffId];
+            if (buff.timeLeft > 0) {
+                const config = getBuffConfig(buffId);
+                if (config) {
+                    ctx.save();
+                    ctx.textAlign = "left";
+                    
+                    // Фон баффа
+                    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                    ctx.fillRect(15, buffY - 12, 120, 20);
+                    
+                    // Рамка
+                    ctx.strokeStyle = config.color || "#ffd700";
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(15, buffY - 12, 120, 20);
+                    
+                    // Иконка
+                    ctx.fillStyle = config.color || "#ffd700";
+                    ctx.font = "12px 'Press Start 2P'";
+                    ctx.fillText(config.icon || "?", 20, buffY - 8);
+                    
+                    // Название
+                    ctx.font = "8px 'Press Start 2P'";
+                    ctx.fillText(config.name || buffId, 35, buffY - 8);
+                    
+                    // Таймер
+                    const timeLeft = Math.ceil(buff.timeLeft);
+                    ctx.fillStyle = "#aaa";
+                    ctx.font = "7px 'Press Start 2P'";
+                    ctx.fillText(timeLeft + "s", 15, buffY + 5);
+                    
+                    ctx.restore();
+                    buffY -= 25;
+                }
+            }
+        }
+    }
 
     // === 5. ЗВАНИЕ (показывается только при получении, по центру, ниже верхних элементов) ===
     const rankShowing = typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank;
@@ -206,6 +250,151 @@ function renderHUD(ctx) {
         ctx.textAlign = "left";
     }
 
+    // === 10. ИНДИКАТОРЫ НАПРАВЛЕНИЯ К ЗОМБИ (мини-индикация на краях экрана) ===
+    renderZombieDirectionIndicators(ctx);
+
     ctx.restore();
+}
+
+/**
+ * Отрисовка индикаторов направления к зомби за пределами экрана
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ */
+function renderZombieDirectionIndicators(ctx) {
+    if (typeof zombies === 'undefined' || !zombies || zombies.length === 0) return;
+    if (!gameStarted || isPaused) return;
+    
+    const cssW = canvas.clientWidth || window.innerWidth;
+    const cssH = canvas.clientHeight || window.innerHeight;
+    
+    // Границы видимой области (в мировых координатах)
+    const viewLeft = camera.x;
+    const viewRight = camera.x + cssW;
+    const viewTop = camera.y;
+    const viewBottom = camera.y + cssH;
+    
+    // Отступ от края экрана для индикаторов
+    const indicatorMargin = 20;
+    const indicatorSize = 12;
+    
+    // Группируем зомби по направлениям (чтобы не показывать слишком много индикаторов)
+    const directionGroups = {};
+    
+    for (let z of zombies) {
+        // Проверяем, находится ли зомби за пределами видимой области
+        const isOffScreen = z.x < viewLeft || z.x > viewRight || z.y < viewTop || z.y > viewBottom;
+        
+        if (isOffScreen) {
+            // Вычисляем угол от центра экрана (игрока) к зомби
+            const dx = z.x - player.x;
+            const dy = z.y - player.y;
+            const angle = Math.atan2(dy, dx);
+            
+            // Округляем угол до ближайшего из 8 направлений (каждые 45 градусов)
+            const normalizedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+            const key = normalizedAngle.toFixed(2);
+            
+            if (!directionGroups[key]) {
+                directionGroups[key] = {
+                    angle: normalizedAngle,
+                    count: 0,
+                    closestZombie: z,
+                    closestDist: Math.hypot(dx, dy)
+                };
+            }
+            
+            directionGroups[key].count++;
+            const dist = Math.hypot(dx, dy);
+            if (dist < directionGroups[key].closestDist) {
+                directionGroups[key].closestDist = dist;
+                directionGroups[key].closestZombie = z;
+            }
+        }
+    }
+    
+    // Рисуем индикаторы для каждого направления
+    for (let key in directionGroups) {
+        const group = directionGroups[key];
+        const angle = group.angle;
+        
+        // Вычисляем точку на краю экрана
+        const centerX = cssW / 2;
+        const centerY = cssH / 2;
+        
+        // Находим пересечение луча с краем экрана
+        let edgeX, edgeY;
+        
+        // Вычисляем точку на краю прямоугольника
+        const tan = Math.tan(angle);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        // Проверяем пересечение с каждой стороной экрана
+        if (cos > 0) {
+            // Правая сторона
+            edgeX = cssW - indicatorMargin;
+            edgeY = centerY + (edgeX - centerX) * tan;
+            if (edgeY < indicatorMargin || edgeY > cssH - indicatorMargin) {
+                if (sin > 0) {
+                    // Нижняя сторона
+                    edgeY = cssH - indicatorMargin;
+                    edgeX = centerX + (edgeY - centerY) / tan;
+                } else {
+                    // Верхняя сторона
+                    edgeY = indicatorMargin;
+                    edgeX = centerX + (edgeY - centerY) / tan;
+                }
+            }
+        } else {
+            // Левая сторона
+            edgeX = indicatorMargin;
+            edgeY = centerY + (edgeX - centerX) * tan;
+            if (edgeY < indicatorMargin || edgeY > cssH - indicatorMargin) {
+                if (sin > 0) {
+                    // Нижняя сторона
+                    edgeY = cssH - indicatorMargin;
+                    edgeX = centerX + (edgeY - centerY) / tan;
+                } else {
+                    // Верхняя сторона
+                    edgeY = indicatorMargin;
+                    edgeX = centerX + (edgeY - centerY) / tan;
+                }
+            }
+        }
+        
+        // Рисуем индикатор
+        ctx.save();
+        ctx.translate(edgeX, edgeY);
+        ctx.rotate(angle + Math.PI / 2); // Поворачиваем стрелку в направлении зомби
+        
+        // Фон индикатора (полупрозрачный красный круг)
+        ctx.fillStyle = "rgba(255, 0, 0, 0.6)";
+        ctx.beginPath();
+        ctx.arc(0, 0, indicatorSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Стрелка (белый треугольник)
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.moveTo(0, -indicatorSize * 0.6);
+        ctx.lineTo(-indicatorSize * 0.4, indicatorSize * 0.3);
+        ctx.lineTo(indicatorSize * 0.4, indicatorSize * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Если зомби несколько в этом направлении, показываем количество
+        if (group.count > 1) {
+            ctx.save();
+            ctx.rotate(-angle - Math.PI / 2); // Возвращаем текст в нормальное положение
+            ctx.fillStyle = "white";
+            ctx.font = "8px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(group.count.toString(), 0, indicatorSize * 1.5);
+            ctx.restore();
+        }
+        
+        ctx.restore();
+    }
 }
 

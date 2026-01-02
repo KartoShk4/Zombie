@@ -14,13 +14,14 @@ let coins = [];  // Массив всех монеток на карте
  * Создание монетки в указанной позиции
  * @param {number} x - Позиция X
  * @param {number} y - Позиция Y
+ * @param {number} value - Стоимость монетки (по умолчанию 1)
  */
-function spawnCoin(x, y) {
+function spawnCoin(x, y, value = 1) {
     coins.push({
         x: x,
         y: y,
         size: 18,  // Размер монетки (увеличен для лучшей видимости)
-        value: 1,  // Стоимость монетки
+        value: value,  // Стоимость монетки
         rotation: 0,  // Вращение для анимации
         pulse: 0,  // Пульсация для анимации
         lifetime: 60  // Время жизни в секундах (60 секунд)
@@ -33,7 +34,7 @@ function spawnCoin(x, y) {
  * Обновление всех монеток каждый кадр
  * Обрабатывает коллизию с игроком и удаление старых
  */
-function updateCoins() {
+function updateCoins(dt = 1/60) {
     for (let i = coins.length - 1; i >= 0; i--) {
         let c = coins[i];
         
@@ -42,7 +43,7 @@ function updateCoins() {
         c.pulse += 0.1;
         
         // Уменьшение времени жизни
-        c.lifetime -= 1 / 60;  // 60 FPS
+        c.lifetime -= dt;
         
         // Удаление истекших монеток
         if (c.lifetime <= 0) {

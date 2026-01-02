@@ -63,6 +63,12 @@ function startGame(loadFromSave = false) {
         const saveData = loadGame();
         if (saveData) {
             restoreGame(saveData);
+            
+            // Инициализируем lastRankScore на основе загруженного счета
+            if (typeof getRankByScore === 'function' && typeof score !== 'undefined') {
+                const currentRank = getRankByScore(score);
+                lastRankScore = currentRank.minScore;
+            }
         }
         
         // Применяем улучшения после загрузки
@@ -73,6 +79,14 @@ function startGame(loadFromSave = false) {
         // НОВАЯ ИГРА - полностью сбрасываем состояние
         // Удаляем сохранение
         deleteSave();
+        
+        // Сбрасываем монеты пользователя при новой игре
+        if (typeof addCoins === 'function' && typeof getCoins === 'function') {
+            const currentCoins = getCoins();
+            if (currentCoins > 0) {
+                addCoins(-currentCoins); // Сбрасываем все монеты
+            }
+        }
         
         // Скрываем кнопку "Продолжить" в главном меню
         document.getElementById("continue-btn").style.display = "none";
@@ -92,6 +106,7 @@ function startGame(loadFromSave = false) {
         upgradeNotificationTime = 0;
         lastUpgradeCheckTime = 0;
         coinSpawnTimer = 0;
+        buffSpawnTimer = 0;
         if (typeof getRankByScore === 'function') {
             lastRankScore = getRankByScore(0).minScore;
         } else {
@@ -126,6 +141,8 @@ function startGame(loadFromSave = false) {
         
         // Инициализируем таймер случайного спавна монеток
         coinSpawnTimer = 5 + Math.random() * 5; // Первая монетка через 5-10 секунд
+        // Инициализируем таймер случайного спавна баффов (как монеты - чаще)
+        buffSpawnTimer = 8 + Math.random() * 7; // Первый бафф через 8-15 секунд
         
         // Очищаем монетки при новой игре
         if (typeof coins !== 'undefined') coins = [];
@@ -142,6 +159,14 @@ function startGame(loadFromSave = false) {
         if (typeof generateObstacles === 'function') {
             generateObstacles();
         }
+        
+        // Очищаем старые баффы если они есть
+        if (typeof buffs !== 'undefined') {
+            buffs = [];
+        }
+        
+        // Инициализируем таймер спавна баффов (баффы будут спавниться во время игры, как монетки)
+        buffSpawnTimer = 15 + Math.random() * 10; // Первый бафф через 15-25 секунд
         
         // Запускаем первую волну
         isWaveActive = false;
@@ -296,19 +321,41 @@ function openLeaderboard() {
     const content = document.getElementById("leaderboard-content");
     const leaderboard = loadLeaderboard();
     
-    if (leaderboard.length === 0) {
-        content.innerHTML = '<p class="text">Рейтинг пуст</p>';
-        return;
+    // Добавляем информацию о званиях
+    let html = '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0, 0, 0, 0.3); border: 2px solid #555;">';
+    html += '<h3 style="font-size: 14px; color: #ffd700; margin-bottom: 10px;">📜 СИСТЕМА ЗВАНИЙ</h3>';
+    html += '<p style="font-size: 10px; color: #aaa; margin-bottom: 10px;">Звания получаются автоматически при достижении определенного количества очков:</p>';
+    
+    if (typeof ranks !== 'undefined' && ranks) {
+        ranks.forEach((rank, index) => {
+            const nextRank = ranks[index + 1];
+            const requirement = nextRank ? `${rank.minScore} - ${nextRank.minScore - 1} очков` : `${rank.minScore}+ очков`;
+            html += `<div style="margin: 5px 0; padding: 5px; background: rgba(255, 255, 255, 0.05);">
+                <span style="color: ${rank.color}; font-weight: bold;">${rank.name}</span>
+                <span style="color: #888; font-size: 9px;"> - ${requirement}</span>
+            </div>`;
+        });
     }
     
-    let html = '';
-    leaderboard.slice(0, 20).forEach((entry, index) => {
-        html += `<div class="leaderboard-item">
-            <span class="leaderboard-rank">#${index + 1}</span>
-            <span style="color: ${getRankByScore(entry.score).color};">${entry.rank}</span>
-            ${entry.nickname} - ${entry.score} очков (Волна ${entry.wave})
+    html += '</div>';
+    
+    if (leaderboard.length === 0) {
+        html += '<p class="text">Рейтинг пуст</p>';
+    } else {
+        html += '<h3 style="font-size: 14px; color: #ffd700; margin: 20px 0 10px 0;">🏆 ЛУЧШИЙ РЕЗУЛЬТАТ</h3>';
+        // Показываем только лучший результат
+        const bestEntry = leaderboard[0];
+        html += `<div class="leaderboard-item" style="padding: 15px; background: rgba(255, 215, 0, 0.1); border: 2px solid #ffd700; margin: 10px 0;">
+            <div style="font-size: 16px; color: #ffd700; margin-bottom: 10px;">🥇 ЛУЧШИЙ ИГРОК</div>
+            <div style="font-size: 14px; color: ${getRankByScore(bestEntry.score).color}; margin-bottom: 5px;">
+                <strong>${bestEntry.rank}</strong> ${bestEntry.nickname}
+            </div>
+            <div style="font-size: 12px; color: #aaa;">
+                Очки: <strong style="color: #ffd700;">${bestEntry.score}</strong> | Волна: <strong style="color: #ffd700;">${bestEntry.wave}</strong>
+            </div>
         </div>`;
-    });
+    }
+    
     content.innerHTML = html;
 }
 
@@ -431,7 +478,9 @@ let pendingAchievements = [];  // Очередь достижений для п�
 let upgradeNotificationTime = 0;  // Время отображения уведомления о доступном улучшении
 let lastUpgradeCheckTime = 0;  // Время последней проверки доступных улучшений
 let coinSpawnTimer = 0;  // Таймер для случайного спавна монеток
+let buffSpawnTimer = 0;  // Таймер для случайного спавна баффов
 let upgradeNotificationShownThisWave = false;  // Показывалось ли уведомление в текущей волне
+let zombiesInWave = 0;  // Количество зомби в текущей волне
 
 // ===== РЕНДЕРИНГ ЭФФЕКТОВ =====
 
@@ -590,12 +639,16 @@ function startWaveCooldown() {
     isWaveCooldown = true;
     waveTimer = waveCooldownTime;
     
+    // НЕ ставим игру на паузу автоматически - только если открывается магазин
+    // Пауза будет установлена в openShop() если нужно
+    
     // Показываем магазин после волны только если есть доступные улучшения
-    if (gameStarted && !isPaused) {
+    if (gameStarted) {
         setTimeout(() => {
-            if (gameStarted && !isPaused && hasAvailableUpgrades()) {
-                openShop();
+            if (gameStarted && hasAvailableUpgrades()) {
+                openShop(); // openShop() установит паузу
             }
+            // Если магазин не открывается, игра продолжается без паузы
         }, 500);
     }
 }
@@ -604,6 +657,11 @@ function startWaveCooldown() {
  * Открытие магазина
  */
 function openShop() {
+    // Всегда ставим игру на паузу при открытии магазина
+    if (gameStarted) {
+        isPaused = true;
+    }
+    
     if (typeof getAllUpgrades === 'function' && typeof getUpgradeLevel === 'function' && typeof getUpgradeCost === 'function') {
         const shopContent = document.getElementById("shop-content");
         const coinsDisplay = document.getElementById("shop-coins-display");
@@ -629,6 +687,7 @@ function openShop() {
             const allUpgrades = getAllUpgrades();
             
             allUpgrades.forEach(upgrade => {
+                // Все улучшения теперь постоянные
                 const level = getUpgradeLevel(upgrade.id);
                 const cost = getUpgradeCost(upgrade.id);
                 const isMaxLevel = level >= upgrade.maxLevel;
@@ -657,9 +716,7 @@ function openShop() {
     }
     
     document.getElementById("shop-menu").classList.remove("hidden");
-    if (gameStarted) {
-        isPaused = true; // Паузим игру при открытии магазина только если игра запущена
-    }
+    // Пауза уже установлена в начале функции
 }
 
 /**
@@ -679,6 +736,12 @@ function buyUpgradeFromShop(upgradeId) {
     if (typeof buyUpgrade === 'function') {
         const success = buyUpgrade(upgradeId);
         if (success) {
+            // Сохраняем данные пользователя после покупки
+            if (typeof saveUserData === 'function') {
+                saveUserData();
+            }
+            // Сохраняем игру после покупки
+            saveGame();
             // Скрываем уведомление, так как улучшение куплено
             upgradeNotificationTime = 0;
             // Обновляем магазин
@@ -710,35 +773,43 @@ function closeShopToMenu() {
 /**
  * Основная функция обновления игрового состояния
  * Вызывается каждый кадр
+ * @param {number} dt - Delta time (время с последнего кадра в секундах)
  */
-function update() {
-    // Обновление игровых объектов
-    updatePlayer();
-    updateZombies();
-    updateBullets();
-    if (typeof updateHearts === 'function') updateHearts();
-    if (typeof updateCoins === 'function') updateCoins();
+function update(dt = 1/60) {
+    // Не обновляем игру если она на паузе
+    if (isPaused) {
+        return;
+    }
+    
+    // Обновление игровых объектов (передаем delta time)
+    updatePlayer(dt);
+    updateZombies(dt);
+    updateBullets(dt);
+    if (typeof updateHearts === 'function') updateHearts(dt);
+    if (typeof updateCoins === 'function') updateCoins(dt);
+    if (typeof updateBuffs === 'function') updateBuffs(dt);
 
     // Обработка перерыва между волнами
     if (isWaveCooldown) {
-        waveTimer -= 1 / 60;  // Уменьшаем таймер (60 FPS)
+        waveTimer -= dt;  // Уменьшаем таймер с учетом delta time
         if (waveTimer <= 0) {
             isWaveCooldown = false;
             wave++;
-            // Пересоздаем фон с новым уровнем сложности
-            generateStaticBackground();
             spawnWave(wave);  // Запускаем следующую волну
         }
     }
 
     // Обновление кулдауна урона игроку
     if (playerHitCooldown > 0) {
-        playerHitCooldown -= 1 / 60;
+        playerHitCooldown -= dt;
         if (playerHitCooldown < 0) playerHitCooldown = 0;
     }
 
     // Мерцание света (случайное значение)
-    lightFlicker = 0.9 + Math.random() * 0.2;
+    // Мерцание света (обновляем реже для уменьшения мигания)
+    if (Math.random() < 0.1) { // Обновляем только в 10% случаев
+        lightFlicker = 0.95 + Math.random() * 0.1; // Меньший диапазон для плавности
+    }
     
     // Обновление вспышки выстрела
     if (muzzleFlash > 0) {
@@ -781,6 +852,7 @@ function update() {
     // Проверка нового звания
     if (typeof getRankByScore === 'function') {
         const currentRank = getRankByScore(score);
+        // Проверяем, получили ли мы новое звание (сравниваем по minScore)
         if (currentRank.minScore > lastRankScore) {
             // Новое звание получено
             currentDisplayRank = currentRank;
@@ -791,7 +863,7 @@ function update() {
     
     // Обновление времени отображения звания
     if (rankDisplayTime > 0) {
-        rankDisplayTime -= 1 / 60; // Уменьшаем каждый кадр (60 FPS)
+        rankDisplayTime -= dt; // Уменьшаем с учетом delta time
         if (rankDisplayTime <= 0) {
             rankDisplayTime = 0;
             currentDisplayRank = null;
@@ -800,7 +872,7 @@ function update() {
     
     // Обновление времени отображения достижения
     if (achievementDisplayTime > 0) {
-        achievementDisplayTime -= 1 / 60; // Уменьшаем каждый кадр (60 FPS)
+        achievementDisplayTime -= dt;
         if (achievementDisplayTime <= 0) {
             achievementDisplayTime = 0;
             currentDisplayAchievement = null;
@@ -843,7 +915,7 @@ function update() {
         }
         
         // Случайный спавн монеток (каждые 10-20 секунд) - только во время игры
-        coinSpawnTimer -= 1 / 60;
+        coinSpawnTimer -= dt;
         if (coinSpawnTimer <= 0 && typeof spawnCoin === 'function') {
             coinSpawnTimer = 10 + Math.random() * 10; // 10-20 секунд
             
@@ -867,6 +939,44 @@ function update() {
             y = Math.max(50, Math.min(y, WORLD_HEIGHT - 50));
             
             spawnCoin(x, y);
+        }
+        
+        // Случайный спавн баффов (каждые 15-25 секунд) - по тому же принципу, что монеты и сердца
+        buffSpawnTimer -= dt;
+        if (buffSpawnTimer <= 0 && typeof spawnBuff === 'function') {
+            buffSpawnTimer = 15 + Math.random() * 10; // 15-25 секунд
+            
+            // Проверяем доступность BUFF_TYPES
+            const buffTypesAvailable = typeof BUFF_TYPES !== 'undefined' || (typeof window !== 'undefined' && window.BUFF_TYPES);
+            if (buffTypesAvailable) {
+                // Спавним бафф в видимой области вокруг игрока (точно как монеты)
+                const cssW = canvas.clientWidth || window.innerWidth;
+                const cssH = canvas.clientHeight || window.innerHeight;
+                
+                // Спавним в области вокруг игрока (в пределах видимости камеры)
+                const spawnRadius = Math.max(cssW, cssH) * 0.6; // Радиус спавна (в пределах видимости)
+                const minDistance = 150; // Минимальное расстояние от игрока
+                const maxDistance = spawnRadius; // Максимальное расстояние от игрока
+                
+                // Случайный угол и расстояние
+                const angle = Math.random() * Math.PI * 2;
+                const distance = minDistance + Math.random() * (maxDistance - minDistance);
+                let x = player.x + Math.cos(angle) * distance;
+                let y = player.y + Math.sin(angle) * distance;
+                
+                // Ограничиваем границами мира
+                x = Math.max(50, Math.min(x, WORLD_WIDTH - 50));
+                y = Math.max(50, Math.min(y, WORLD_HEIGHT - 50));
+                
+                // Выбираем случайный тип баффа (используем значения, а не ключи)
+                const buffTypesObj = typeof BUFF_TYPES !== 'undefined' ? BUFF_TYPES : window.BUFF_TYPES;
+                const buffTypes = Object.values(buffTypesObj); // Используем значения, а не ключи
+                if (buffTypes && buffTypes.length > 0) {
+                    const buffType = buffTypes[Math.floor(Math.random() * buffTypes.length)];
+                    spawnBuff(buffType, x, y);
+                    console.log('Бафф заспавнен по таймеру:', buffType, 'в позиции', x, y);
+                }
+            }
         }
     }
 }
@@ -921,11 +1031,12 @@ function render() {
     // 4. Препятствия (рисуются перед игроком и зомби)
     if (typeof renderObstacles === 'function') renderObstacles(ctx);
     
-    // 5. Игровые объекты (следы, кровь, сердечки, монетки, игрок, зомби, пули)
+    // 5. Игровые объекты (следы, кровь, сердечки, монетки, баффы, игрок, зомби, пули)
     renderFootprints(ctx);
     renderBlood(ctx);
     if (typeof renderHearts === 'function') renderHearts(ctx);
     if (typeof renderCoins === 'function') renderCoins(ctx);
+    if (typeof renderBuffs === 'function') renderBuffs(ctx); // Баффы отрисовываются в мировых координатах
     
     // Радиус стрельбы (белая полупрозрачная рамка)
     // Теперь рисуем в CSS-пикселях, поэтому используем обычный arc с одинаковыми радиусами
@@ -963,22 +1074,25 @@ function render() {
         ctx.restore();
     }
 
-    // 6. Джойстик (для мобильных устройств) - единый джойстик по центру снизу
-    // Теперь рисуем в CSS-пикселях, поэтому используем обычный arc с одинаковыми радиусами
-    const r = joystick.radius; // радиус круга в CSS-пикселях
-    
-    // База джойстика — круг
-    ctx.fillStyle = 'rgba(116,116,116,0.3)';
-    ctx.beginPath();
-    ctx.arc(joystick.baseX, joystick.baseY, r, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Стик джойстика — круг
-    const stickR = r / 2;
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.beginPath();
-    ctx.arc(joystick.stickX, joystick.stickY, stickR, 0, Math.PI * 2);
-    ctx.fill();
+    // 6. Джойстик (для мобильных устройств) - плавающий джойстик
+    // Показываем только если джойстик активен (touchId !== null)
+    if (isMobile && touchId !== null) {
+        // Теперь рисуем в CSS-пикселях, поэтому используем обычный arc с одинаковыми радиусами
+        const r = joystick.radius; // радиус круга в CSS-пикселях
+        
+        // База джойстика — круг
+        ctx.fillStyle = 'rgba(116,116,116,0.3)';
+        ctx.beginPath();
+        ctx.arc(joystick.baseX, joystick.baseY, r, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Стик джойстика — круг
+        const stickR = r / 2;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath();
+        ctx.arc(joystick.stickX, joystick.stickY, stickR, 0, Math.PI * 2);
+        ctx.fill();
+    }
 
     // 7. Виньетка (самый верхний слой)
     renderVignette(ctx);
@@ -990,15 +1104,23 @@ function render() {
  * Главный игровой цикл
  * Вызывается через requestAnimationFrame
  */
-function gameLoop() {
+let lastFrameTime = performance.now();
+const TARGET_FPS = 60;
+
+function gameLoop(currentTime) {
     // Если игра не запущена, просто продолжаем цикл
     if (!gameStarted) {
+        lastFrameTime = currentTime;
         requestAnimationFrame(gameLoop);
         return;
     }
 
-    // Обновление состояния игры
-    update();
+    // Вычисляем delta time (время с последнего кадра в секундах)
+    const deltaTime = Math.min((currentTime - lastFrameTime) / 1000, 0.1); // Ограничиваем максимум 0.1 сек
+    lastFrameTime = currentTime;
+
+    // Обновление состояния игры с учетом delta time
+    update(deltaTime);
 
     // Автоматическая стрельба всегда активна, нацеливается на зомби по очереди
     tryShootBullet();
@@ -1011,6 +1133,111 @@ function gameLoop() {
 }
 
 // ===== УПРАВЛЕНИЕ ИГРОЙ =====
+
+/**
+ * Расчет стоимости возрождения на основе волны
+ * @returns {number} Стоимость возрождения в монетах
+ */
+function getReviveCost() {
+    // Базовая стоимость 10 монет, увеличивается на 5 за каждую волну
+    return 10 + (wave - 1) * 5;
+}
+
+/**
+ * Показ модального окна возрождения
+ */
+function showReviveModal() {
+    // Не останавливаем игру полностью, только ставим на паузу
+    isPaused = true;
+    
+    const reviveCost = getReviveCost();
+    const playerCoins = typeof getCoins === 'function' ? getCoins() : 0;
+    const canAfford = playerCoins >= reviveCost;
+    
+    // Обновляем текст в модальном окне
+    const reviveCostEl = document.getElementById("revive-cost");
+    const reviveCoinsEl = document.getElementById("revive-player-coins");
+    const reviveBtn = document.getElementById("revive-confirm-btn");
+    const reviveCancelBtn = document.getElementById("revive-cancel-btn");
+    
+    if (reviveCostEl) reviveCostEl.textContent = reviveCost;
+    if (reviveCoinsEl) reviveCoinsEl.textContent = playerCoins;
+    
+    // Настраиваем кнопку возрождения
+    if (reviveBtn) {
+        if (canAfford) {
+            reviveBtn.disabled = false;
+            reviveBtn.style.opacity = "1";
+            reviveBtn.onclick = confirmRevive;
+        } else {
+            reviveBtn.disabled = true;
+            reviveBtn.style.opacity = "0.5";
+            reviveBtn.onclick = null;
+        }
+    }
+    
+    if (reviveCancelBtn) {
+        reviveCancelBtn.onclick = cancelRevive;
+    }
+    
+    // Показываем модальное окно
+    document.getElementById("revive-modal").classList.remove("hidden");
+}
+
+/**
+ * Подтверждение возрождения
+ */
+function confirmRevive() {
+    const reviveCost = getReviveCost();
+    const playerCoins = typeof getCoins === 'function' ? getCoins() : 0;
+    
+    if (playerCoins >= reviveCost) {
+        // Списываем монеты
+        if (typeof addCoins === 'function') {
+            addCoins(-reviveCost);
+        }
+        
+        // Возрождаем игрока
+        player.health = player.maxHealth || config.player.health;
+        playerHitCooldown = 0;
+        
+        // Отталкиваем всех зомби от игрока
+        for (let z of zombies) {
+            const dx = z.x - player.x;
+            const dy = z.y - player.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 0) {
+                const pushDistance = 100; // Отталкиваем на 100 пикселей
+                z.x += (dx / dist) * pushDistance;
+                z.y += (dy / dist) * pushDistance;
+            }
+        }
+        
+        // Скрываем модальное окно
+        document.getElementById("revive-modal").classList.add("hidden");
+        
+        // Возобновляем игру
+        isPaused = false;
+        if (!gameStarted) {
+            gameStarted = true;
+        }
+        canvas.classList.add("game-active");
+    } else {
+        // Если монет не хватает, завершаем игру
+        cancelRevive();
+    }
+}
+
+/**
+ * Отмена возрождения - завершение игры
+ */
+function cancelRevive() {
+    // Скрываем модальное окно возрождения
+    document.getElementById("revive-modal").classList.add("hidden");
+    
+    // Завершаем игру
+    gameOver();
+}
 
 /**
  * Обработка окончания игры
@@ -1152,7 +1379,7 @@ function generateStaticBackground() {
     ctx.fillRect(0, 0, w, h);
     
     // Пиксельная текстура травы (квадраты разных оттенков зеленого)
-    const pixelSize = 4; // Размер пикселя
+    const pixelSize = 10; // Размер пикселя (увеличен для лучшего вида)
     for (let y = 0; y < h; y += pixelSize) {
         for (let x = 0; x < w; x += pixelSize) {
             // Случайные вариации зеленого
@@ -1192,13 +1419,16 @@ window.addEventListener('resize', () => {
     player.x = WORLD_WIDTH / 2;
     player.y = WORLD_HEIGHT / 2;
 
-    // Джойстик (по центру снизу) - координаты в CSS-пикселях
-    const cssW = canvas.clientWidth || window.innerWidth;
-    const cssH = canvas.clientHeight || window.innerHeight;
-    joystick.baseX = cssW / 2;
-    joystick.baseY = cssH - 120;
-    joystick.stickX = joystick.baseX;
-    joystick.stickY = joystick.baseY;
+    // Джойстик - при ресайзе сбрасываем только если не активен
+    // (для плавающего джойстика позиция устанавливается при касании)
+    if (touchId === null) {
+        const cssW = canvas.clientWidth || window.innerWidth;
+        const cssH = canvas.clientHeight || window.innerHeight;
+        joystick.baseX = cssW / 2;
+        joystick.baseY = cssH - 120;
+        joystick.stickX = joystick.baseX;
+        joystick.stickY = joystick.baseY;
+    }
 });
 
 // ===== ОБРАБОТКА КЛИКА ПО КНОПКЕ ПАУЗЫ =====
@@ -1253,6 +1483,7 @@ window.onload = () => {
     resizeCanvasToDisplaySize(canvas, ctx);
     
     // Инициализация джойстика - координаты в CSS-пикселях
+    // Для плавающего джойстика начальная позиция не важна, она устанавливается при касании
     const cssW = canvas.clientWidth || window.innerWidth;
     const cssH = canvas.clientHeight || window.innerHeight;
     joystick.baseX = cssW / 2;
