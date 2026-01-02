@@ -180,6 +180,11 @@ function updateBullets() {
                         alpha: 1
                     });
 
+                    // Спавн сердечка с вероятностью 30%
+                    if (typeof spawnHeart === 'function' && Math.random() < 0.3) {
+                        spawnHeart(z.x, z.y);
+                    }
+
                     // Удаляем зомби
                     zombies.splice(j, 1);
                     score++;

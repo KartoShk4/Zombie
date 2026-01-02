@@ -60,6 +60,7 @@ function startGame(loadFromSave = false) {
         bullets = [];
         footprints = [];
         blood = [];
+        if (typeof hearts !== 'undefined') hearts = [];
         
         // Сбрасываем счетчик ID зомби
         if (typeof nextZombieId !== 'undefined') {
@@ -85,12 +86,14 @@ function startGame(loadFromSave = false) {
     }
     
     // Инициализируем камеру на игрока при старте
-    camera.x = player.x - canvas.width / 2;
-    camera.y = player.y - canvas.height / 2;
+    const cssW = canvas.clientWidth || window.innerWidth;
+    const cssH = canvas.clientHeight || window.innerHeight;
+    camera.x = player.x - cssW / 2;
+    camera.y = player.y - cssH / 2;
     
     // Ограничиваем камеру границами мира
-    camera.x = Math.max(0, Math.min(camera.x, WORLD_WIDTH - canvas.width));
-    camera.y = Math.max(0, Math.min(camera.y, WORLD_HEIGHT - canvas.height));
+    camera.x = Math.max(0, Math.min(camera.x, WORLD_WIDTH - cssW));
+    camera.y = Math.max(0, Math.min(camera.y, WORLD_HEIGHT - cssH));
 }
 
 /**
@@ -271,9 +274,31 @@ const ctx = canvas.getContext("2d");
 // Эффекты
 let muzzleFlash = 0;  // Интенсивность вспышки при выстреле
 
-// Установка размеров canvas
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+/**
+ * Масштабирование canvas под DPR и установка CSS-размеров
+ * Рисование происходит в CSS-пикселях
+ * @param {HTMLCanvasElement} canvas - Canvas элемент
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ */
+function resizeCanvasToDisplaySize(canvas, ctx) {
+    const DPR = window.devicePixelRatio || 1;
+    const cssW = Math.floor(canvas.clientWidth || window.innerWidth);
+    const cssH = Math.floor(canvas.clientHeight || window.innerHeight);
+
+    // Устанавливаем bitmap размеры с учётом DPR
+    canvas.width = cssW * DPR;
+    canvas.height = cssH * DPR;
+
+    // Оставляем CSS размеры как есть (чтобы элемент занимал нужное место)
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+
+    // Приводим контекст к CSS‑координатам: теперь 1 единица в рисовании = 1 CSS‑пиксель
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+
+// Инициализация размеров canvas
+resizeCanvasToDisplaySize(canvas, ctx);
 
 // ===== ФОНОВЫЙ CANVAS =====
 // Отдельный canvas для статического фона (травы, земли, камней)
@@ -380,9 +405,11 @@ function renderFootprints(ctx) {
  * @param {CanvasRenderingContext2D} ctx - Контекст canvas
  */
 function renderVignette(ctx) {
+    const cssW = canvas.clientWidth || window.innerWidth;
+    const cssH = canvas.clientHeight || window.innerHeight;
     let gradient = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height / 2, canvas.width * 0.2,
-        canvas.width / 2, canvas.height / 2, canvas.width * 0.7
+        cssW / 2, cssH / 2, cssW * 0.2,
+        cssW / 2, cssH / 2, cssW * 0.7
     );
 
     gradient.addColorStop(0, "rgba(0,0,0,0)");
@@ -390,7 +417,7 @@ function renderVignette(ctx) {
 
     ctx.save();
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, cssW, cssH);
     ctx.restore();
 }
 
@@ -452,6 +479,7 @@ function update() {
     updatePlayer();
     updateZombies();
     updateBullets();
+    if (typeof updateHearts === 'function') updateHearts();
 
     // Обработка перерыва между волнами
     if (isWaveCooldown) {
@@ -482,12 +510,14 @@ function update() {
 
     // === ОБНОВЛЕНИЕ КАМЕРЫ ===
     // Камера следует за игроком
-    camera.x = player.x - canvas.width / 2;
-    camera.y = player.y - canvas.height / 2;
+    const cssW = canvas.clientWidth || window.innerWidth;
+    const cssH = canvas.clientHeight || window.innerHeight;
+    camera.x = player.x - cssW / 2;
+    camera.y = player.y - cssH / 2;
 
     // Ограничиваем камеру границами мира
-    camera.x = Math.max(0, Math.min(camera.x, WORLD_WIDTH - canvas.width));
-    camera.y = Math.max(0, Math.min(camera.y, WORLD_HEIGHT - canvas.height));
+    camera.x = Math.max(0, Math.min(camera.x, WORLD_WIDTH - cssW));
+    camera.y = Math.max(0, Math.min(camera.y, WORLD_HEIGHT - cssH));
     
     // Проверка достижений (если система доступна) - проверяем периодически
     if (typeof checkAchievements === 'function' && Math.random() < 0.02) { // Проверяем ~1% кадров
@@ -535,9 +565,11 @@ function update() {
  * @param {CanvasRenderingContext2D} ctx - Контекст canvas
  */
 function renderFog(ctx) {
+    const cssW = canvas.clientWidth || window.innerWidth;
+    const cssH = canvas.clientHeight || window.innerHeight;
     ctx.save();
     ctx.fillStyle = "rgba(200, 200, 200, 0.15)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, cssW, cssH);
     ctx.restore();
 }
 
@@ -573,28 +605,20 @@ function render() {
 
     // Вспышка при выстреле теперь отрисовывается на пистолете в renderPlayer
 
-    // 4. Игровые объекты (следы, кровь, игрок, зомби, пули)
+    // 4. Игровые объекты (следы, кровь, сердечки, игрок, зомби, пули)
     renderFootprints(ctx);
     renderBlood(ctx);
+    if (typeof renderHearts === 'function') renderHearts(ctx);
     
     // Радиус стрельбы (белая полупрозрачная рамка)
-    // Компенсируем соотношение сторон canvas для правильного отображения круга
+    // Теперь рисуем в CSS-пикселях, поэтому используем обычный arc с одинаковыми радиусами
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.lineWidth = 2;
-    const shootAspectRatio = canvas.width / canvas.height;
     const shootRadius = config.bullet.maxRange;
-    // Применяем scale вокруг центра игрока для правильного отображения круга
-    ctx.translate(player.x, player.y);
-    if (shootAspectRatio < 1) {
-        // Портретная ориентация - сжимаем по Y для получения круга
-        ctx.scale(1, shootAspectRatio);
-    } else {
-        // Ландшафтная ориентация - сжимаем по X
-        ctx.scale(shootAspectRatio, 1);
-    }
+    
     ctx.beginPath();
-    ctx.arc(0, 0, shootRadius, 0, Math.PI * 2);
+    ctx.arc(player.x, player.y, shootRadius, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
     
@@ -609,28 +633,34 @@ function render() {
     
     // 6. Индикатор паузы
     if (isPaused) {
+        const cssW = canvas.clientWidth || window.innerWidth;
+        const cssH = canvas.clientHeight || window.innerHeight;
         ctx.save();
         ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, cssW, cssH);
         ctx.font = "32px 'Press Start 2P'";
         ctx.fillStyle = "white";
         ctx.textAlign = "center";
-        ctx.fillText("ПАУЗА", canvas.width / 2, canvas.height / 2);
+        ctx.fillText("ПАУЗА", cssW / 2, cssH / 2);
         ctx.textAlign = "left";
         ctx.restore();
     }
 
     // 6. Джойстик (для мобильных устройств) - единый джойстик по центру снизу
-    // База джойстика
+    // Теперь рисуем в CSS-пикселях, поэтому используем обычный arc с одинаковыми радиусами
+    const r = joystick.radius; // радиус круга в CSS-пикселях
+    
+    // База джойстика — круг
     ctx.fillStyle = 'rgba(116,116,116,0.3)';
     ctx.beginPath();
-    ctx.arc(joystick.baseX, joystick.baseY, joystick.radius, 0, Math.PI * 2);
+    ctx.arc(joystick.baseX, joystick.baseY, r, 0, Math.PI * 2);
     ctx.fill();
-
-    // Стик джойстика
+    
+    // Стик джойстика — круг
+    const stickR = r / 2;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.beginPath();
-    ctx.arc(joystick.stickX, joystick.stickY, joystick.radius / 2, 0, Math.PI * 2);
+    ctx.arc(joystick.stickX, joystick.stickY, stickR, 0, Math.PI * 2);
     ctx.fill();
 
     // 7. Виньетка (самый верхний слой)
@@ -939,9 +969,8 @@ function generateStaticBackground() {
 // ===== ОБРАБОТКА ИЗМЕНЕНИЯ РАЗМЕРА ОКНА =====
 
 window.addEventListener('resize', () => {
-    // Обновление размеров canvas
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // Обновление размеров canvas с учётом DPR
+    resizeCanvasToDisplaySize(canvas, ctx);
 
     // Пересоздаём фон
     backgroundCanvas.width = WORLD_WIDTH;
@@ -952,9 +981,11 @@ window.addEventListener('resize', () => {
     player.x = WORLD_WIDTH / 2;
     player.y = WORLD_HEIGHT / 2;
 
-    // Джойстик (по центру снизу)
-    joystick.baseX = canvas.width / 2;
-    joystick.baseY = canvas.height - 120;
+    // Джойстик (по центру снизу) - координаты в CSS-пикселях
+    const cssW = canvas.clientWidth || window.innerWidth;
+    const cssH = canvas.clientHeight || window.innerHeight;
+    joystick.baseX = cssW / 2;
+    joystick.baseY = cssH - 120;
     joystick.stickX = joystick.baseX;
     joystick.stickY = joystick.baseY;
 });
@@ -964,8 +995,9 @@ window.addEventListener('resize', () => {
 function checkPauseButtonClick(x, y) {
     if (!isMobile || !gameStarted || isPaused) return false;
     
+    const cssW = canvas.clientWidth || window.innerWidth;
     const pauseBtnSize = 40;
-    const pauseBtnX = canvas.width - pauseBtnSize - 20;
+    const pauseBtnX = cssW - pauseBtnSize - 20;
     const pauseBtnY = 20;
     
     if (x >= pauseBtnX - 5 && x <= pauseBtnX + pauseBtnSize + 5 &&
@@ -1006,9 +1038,14 @@ canvas.addEventListener("touchend", (e) => {
 });
 
 window.onload = () => {
-    // Инициализация джойстика
-    joystick.baseX = canvas.width / 2;
-    joystick.baseY = canvas.height - 120;
+    // Убеждаемся, что canvas правильно масштабирован с учётом DPR
+    resizeCanvasToDisplaySize(canvas, ctx);
+    
+    // Инициализация джойстика - координаты в CSS-пикселях
+    const cssW = canvas.clientWidth || window.innerWidth;
+    const cssH = canvas.clientHeight || window.innerHeight;
+    joystick.baseX = cssW / 2;
+    joystick.baseY = cssH - 120;
     joystick.stickX = joystick.baseX;
     joystick.stickY = joystick.baseY;
     

@@ -17,10 +17,10 @@ function renderHUD(ctx) {
     ctx.textBaseline = "top";
     ctx.fillStyle = "white";
 
-    // === 1. СЕРДЦЕ (ИКОНКА ЗДОРОВЬЯ) - УМЕНЬШЕНО ===
+    // === 1. СЕРДЦЕ (ИКОНКА ЗДОРОВЬЯ) - СЛЕВА ВВЕРХУ ===
     drawPixelHeart(ctx, 15, 15, 2);
 
-    // === 2. ПОЛОСКА ЗДОРОВЬЯ - УМЕНЬШЕНА ===
+    // === 2. ПОЛОСКА ЗДОРОВЬЯ - СЛЕВА ВВЕРХУ, РЯДОМ С СЕРДЦЕМ ===
     const maxHP = player.maxHealth || config.player.health;
     const hpWidth = 80;
 
@@ -42,48 +42,11 @@ function renderHUD(ctx) {
     ctx.fillText(player.health + "/" + maxHP, 47, 29);
     ctx.font = "10px 'Press Start 2P'"; // Восстанавливаем размер шрифта
 
-    // === 3. СЧЕТ И ВОЛНА (справа вверху, компактный) ===
-    ctx.fillStyle = "white";
-    ctx.textAlign = "right";
-    const rightX = canvas.width - 15; // Прямо у правого края
-    ctx.fillText("Score: " + score, rightX, 15);
-    ctx.fillText("Wave: " + wave, rightX, 30);
-    ctx.textAlign = "left";
-
-    // === 4. ЗВАНИЕ (показывается только при получении, сверху по центру) ===
-    // Рисуем ПЕРЕД таймером, чтобы они не перекрывались
-    if (typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank) {
-        ctx.save();
-        ctx.textAlign = "center";
-        ctx.font = "12px 'Press Start 2P'";
-        
-        // Плавное появление/исчезание
-        const alpha = Math.min(1, rankDisplayTime / 0.5);
-        ctx.globalAlpha = alpha > 0.3 ? 1 : alpha / 0.3;
-        
-        ctx.fillStyle = currentDisplayRank.color;
-        // Показываем достаточно высоко, чтобы не мешать HP (который заканчивается на ~37px)
-        // Используем Y=52 чтобы был достаточный отступ от текста HP (Y=29, высота ~10px)
-        ctx.fillText(currentDisplayRank.name, canvas.width / 2, 52);
-        ctx.restore();
-    }
-
-    // === 5. ТАЙМЕР ВОЛНЫ (компактный, ниже звания) ===
-    if (isWaveCooldown) {
-        // Проверяем, не показывается ли звание, чтобы не перекрыться
-        const rankShowing = typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank;
-        ctx.textAlign = "center";
-        ctx.font = "10px 'Press Start 2P'";
-        // Если показывается звание, сдвигаем таймер ниже, иначе показываем ниже HP
-        const timerY = rankShowing ? 67 : 43;
-        ctx.fillText("Next: " + Math.ceil(waveTimer), canvas.width / 2, timerY);
-        ctx.textAlign = "left";
-    }
-
-    // === 7. КНОПКА ПАУЗЫ (для мобильных, уменьшена) ===
+    // === 3. КНОПКА ПАУЗЫ (для мобильных, справа вверху) ===
     if (isMobile) {
+        const cssW = canvas.clientWidth || window.innerWidth;
         const pauseBtnSize = 30;
-        const pauseBtnX = canvas.width - pauseBtnSize - 15;
+        const pauseBtnX = cssW - pauseBtnSize - 15;
         const pauseBtnY = 15;
         
         // Фон кнопки
@@ -94,6 +57,50 @@ function renderHUD(ctx) {
         ctx.fillStyle = "white";
         ctx.fillRect(pauseBtnX, pauseBtnY, pauseBtnSize * 0.25, pauseBtnSize);
         ctx.fillRect(pauseBtnX + pauseBtnSize * 0.5, pauseBtnY, pauseBtnSize * 0.25, pauseBtnSize);
+    }
+
+    // === 4. СЧЕТ И ВОЛНА (справа вверху, ниже кнопки паузы) ===
+    const cssW = canvas.clientWidth || window.innerWidth;
+    ctx.fillStyle = "white";
+    ctx.textAlign = "right";
+    const rightX = cssW - 15; // Прямо у правого края
+    const scoreY = isMobile ? 55 : 15; // Ниже кнопки паузы на мобильных
+    const waveY = isMobile ? 70 : 30; // Ниже счета
+    ctx.fillText("Score: " + score, rightX, scoreY);
+    ctx.fillText("Wave: " + wave, rightX, waveY);
+    ctx.textAlign = "left";
+
+    // === 5. ЗВАНИЕ (показывается только при получении, по центру, ниже верхних элементов) ===
+    if (typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank) {
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.font = "12px 'Press Start 2P'";
+        
+        // Плавное появление/исчезание
+        const alpha = Math.min(1, rankDisplayTime / 0.5);
+        ctx.globalAlpha = alpha > 0.3 ? 1 : alpha / 0.3;
+        
+        const cssW = canvas.clientWidth || window.innerWidth;
+        ctx.fillStyle = currentDisplayRank.color;
+        // Показываем по центру, достаточно низко, чтобы не мешать верхним элементам
+        // Учитываем высоту HP (до ~37px) и счет/волну (до ~85px на мобильных)
+        const rankY = isMobile ? 95 : 60;
+        ctx.fillText(currentDisplayRank.name, cssW / 2, rankY);
+        ctx.restore();
+    }
+
+    // === 6. ТАЙМЕР ВОЛНЫ (по центру, ниже звания или ниже верхних элементов) ===
+    if (isWaveCooldown) {
+        // Проверяем, не показывается ли звание, чтобы не перекрыться
+        const rankShowing = typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank;
+        ctx.textAlign = "center";
+        ctx.font = "10px 'Press Start 2P'";
+        // Если показывается звание, сдвигаем таймер ниже, иначе показываем ниже верхних элементов
+        const cssW = canvas.clientWidth || window.innerWidth;
+        const baseTimerY = isMobile ? 95 : 60;
+        const timerY = rankShowing ? baseTimerY + 20 : baseTimerY;
+        ctx.fillText("Next: " + Math.ceil(waveTimer), cssW / 2, timerY);
+        ctx.textAlign = "left";
     }
 
     ctx.restore();

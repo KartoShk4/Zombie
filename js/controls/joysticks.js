@@ -9,13 +9,14 @@
 // ===== БАЗОВЫЕ ОБЪЕКТЫ ДЖОЙСТИКОВ =====
 
 // Единый джойстик — движение и стрельба
+// Координаты в CSS-пикселях (будут инициализированы при загрузке)
 let joystick = {
-    baseX: window.innerWidth / 2,       // Базовая позиция X (центр экрана)
-    baseY: window.innerHeight - 100,    // Базовая позиция Y (снизу)
-    stickX: window.innerWidth / 2,      // Текущая позиция стика X
-    stickY: window.innerHeight - 100,   // Текущая позиция стика Y
-    radius: 60,                          // Радиус джойстика
-    vector: { x: 0, y: 0 }              // Нормализованный вектор направления
+    baseX: 0,       // Базовая позиция X (центр экрана) - в CSS-пикселях
+    baseY: 0,       // Базовая позиция Y (снизу) - в CSS-пикселях
+    stickX: 0,      // Текущая позиция стика X - в CSS-пикселях
+    stickY: 0,      // Текущая позиция стика Y - в CSS-пикселях
+    radius: 60,     // Радиус джойстика в CSS-пикселях
+    vector: { x: 0, y: 0 }  // Нормализованный вектор направления
 };
 
 // ===== ОТСЛЕЖИВАНИЕ КАСАНИЙ =====
@@ -29,11 +30,15 @@ let touchId = null;   // ID касания джойстика
  * @param {TouchEvent} e - Событие касания
  */
 function handleTouchStart(e) {
+    const rect = canvas.getBoundingClientRect();
     for (let t of e.changedTouches) {
         // ЕДИНЫЙ ДЖОЙСТИК (любое касание, если джойстик свободен)
         if (touchId === null) {
             touchId = t.identifier;
-            moveJoystick(joystick, t.clientX, t.clientY);
+            // Преобразуем координаты касания в CSS-пиксели относительно canvas
+            const x = t.clientX - rect.left;
+            const y = t.clientY - rect.top;
+            moveJoystick(joystick, x, y);
         }
     }
 }
@@ -43,10 +48,14 @@ function handleTouchStart(e) {
  * @param {TouchEvent} e - Событие касания
  */
 function handleTouchMove(e) {
+    const rect = canvas.getBoundingClientRect();
     for (let t of e.changedTouches) {
         // Обновляем джойстик
         if (t.identifier === touchId) {
-            moveJoystick(joystick, t.clientX, t.clientY);
+            // Преобразуем координаты касания в CSS-пиксели относительно canvas
+            const x = t.clientX - rect.left;
+            const y = t.clientY - rect.top;
+            moveJoystick(joystick, x, y);
         }
     }
 }

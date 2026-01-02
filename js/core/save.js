@@ -84,7 +84,17 @@ function saveGame() {
                 y: b.y,
                 size: b.size,
                 alpha: b.alpha
-            }))
+            })),
+            
+            // Сердечки (если система доступна)
+            hearts: (typeof hearts !== 'undefined' && hearts) ? hearts.map(h => ({
+                x: h.x,
+                y: h.y,
+                size: h.size,
+                healAmount: h.healAmount,
+                pulse: h.pulse,
+                lifetime: h.lifetime
+            })) : []
         };
         
         localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
@@ -185,6 +195,11 @@ function restoreGame(saveData) {
     // Восстанавливаем эффекты
     footprints = saveData.footprints || [];
     blood = saveData.blood || [];
+    
+    // Восстанавливаем сердечки (если система доступна)
+    if (typeof hearts !== 'undefined' && saveData.hearts) {
+        hearts = saveData.hearts;
+    }
     
     console.log('Игра загружена');
 }
