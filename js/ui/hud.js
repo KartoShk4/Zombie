@@ -101,12 +101,12 @@ function renderHUD(ctx) {
                     
                     // Фон баффа
                     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-                    ctx.fillRect(15, buffY - 12, 120, 20);
+                    ctx.fillRect(15, buffY - 12, 200, 20);
                     
                     // Рамка
                     ctx.strokeStyle = config.color || "#ffd700";
                     ctx.lineWidth = 2;
-                    ctx.strokeRect(15, buffY - 12, 120, 20);
+                    ctx.strokeRect(15, buffY - 12, 200, 20);
                     
                     // Иконка
                     ctx.fillStyle = config.color || "#ffd700";
@@ -121,7 +121,7 @@ function renderHUD(ctx) {
                     const timeLeft = Math.ceil(buff.timeLeft);
                     ctx.fillStyle = "#aaa";
                     ctx.font = "7px 'Press Start 2P'";
-                    ctx.fillText(timeLeft + "s", 15, buffY + 5);
+                    ctx.fillText(timeLeft + "s", 210, buffY + 5);
                     
                     ctx.restore();
                     buffY -= 25;

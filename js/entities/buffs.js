@@ -12,7 +12,7 @@ let activeBuffs = {};  // Активные баффы игрока {buffId: {tim
 // ===== ТИПЫ БАФФОВ =====
 const BUFF_TYPES = {
     MOVEMENT_SPEED: 'movementSpeed',    // Скорость передвижения
-    MOVEMENT_SLOW: 'movementSlow',    // Медленное передвижение
+    MOVEMENT_SLOW: 'movementSlow',      // Медленное передвижение
     FIRE_RATE: 'fireRate',              // Скорость атаки
     MULTI_SHOT_2: 'multiShot2',        // 2 пули
     MULTI_SHOT_4: 'multiShot4',        // 4 пули
@@ -40,7 +40,7 @@ const buffConfig = {
         icon: '🏃',
         color: '#4a8',
         getDuration: () => 5 + Math.random() * 5,  // 5-10 секунд (случайная длительность при применении)
-        effect: (level) => 1 + level / 0.3  // +30% за уровень
+        effect: (level) => 1 + level - 0.3  // -30% за уровень
     },
     [BUFF_TYPES.FIRE_RATE]: {
         name: 'Скорость атаки',
@@ -285,7 +285,7 @@ function renderBuffs(ctx) {
         
         // Внешняя рамка (более яркая и толстая)
         ctx.strokeStyle = b.color;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 2;
         ctx.strokeRect(-b.size/2 - 3, -b.size/2 - 3, b.size + 6, b.size + 6);
         
         // Внутренняя рамка (белая для контраста)
