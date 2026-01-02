@@ -53,8 +53,20 @@ function damagePlayer(amount) {
 function updatePlayer() {
     // === 1. УПРАВЛЕНИЕ ДЖОЙСТИКОМ (МОБИЛЬНОЕ) ===
     if (joystick.vector.x !== 0 || joystick.vector.y !== 0) {
-        player.x += joystick.vector.x * player.speed;
-        player.y += joystick.vector.y * player.speed;
+        const newX = player.x + joystick.vector.x * player.speed;
+        const newY = player.y + joystick.vector.y * player.speed;
+        
+        // Проверяем коллизию с препятствиями (деревьями)
+        if (typeof checkObstacleCollision === 'function') {
+            const playerRadius = player.width / 2;
+            if (!checkObstacleCollision(newX, newY, playerRadius)) {
+                player.x = newX;
+                player.y = newY;
+            }
+        } else {
+            player.x = newX;
+            player.y = newY;
+        }
     }
 
     // === 2. ОГРАНИЧЕНИЯ ПО КРАЯМ МИРА ===
@@ -104,21 +116,16 @@ function renderPlayer(ctx) {
     ctx.translate(player.x, player.y);
 
     const w = player.width;
-    const h = player.height;
-
-    // === ТЕЛО ИГРОКА (синий квадрат) ===
-    ctx.fillStyle = "#4a90e2";
-    ctx.fillRect(-w/2, -h/2, w, h);
+    const headSize = w * 1.0; // Голова равна размеру игрока
 
     // === ГОЛОВА (белый квадрат) ===
-    const headSize = w * 0.6;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(-headSize/2, -h/2 - headSize * 0.3, headSize, headSize);
+    ctx.fillRect(-headSize/2, -headSize/2, headSize, headSize);
 
     // === ГЛАЗА (черные квадраты) ===
-    const eyeSize = w * 0.12;
-    const eyeOffsetX = w * 0.15;
-    const eyeOffsetY = -h/2 - headSize * 0.15;
+    const eyeSize = headSize * 0.2;
+    const eyeOffsetX = headSize * 0.25;
+    const eyeOffsetY = -headSize * 0.15;
     
     ctx.fillStyle = "#000000";
     ctx.fillRect(-eyeOffsetX - eyeSize/2, eyeOffsetY - eyeSize/2, eyeSize, eyeSize);
@@ -126,68 +133,32 @@ function renderPlayer(ctx) {
 
     // === РОТ (черная линия) ===
     ctx.fillStyle = "#000000";
-    ctx.fillRect(-w * 0.15, eyeOffsetY + eyeSize, w * 0.3, w * 0.05);
-
-    // === РУКИ (синие квадраты) ===
-    const armWidth = w * 0.2;
-    const armHeight = h * 0.4;
-    ctx.fillStyle = "#4a90e2";
-    // Левая рука
-    ctx.fillRect(-w/2 - armWidth * 0.5, -h * 0.2, armWidth, armHeight);
+    ctx.fillRect(-headSize * 0.25, eyeOffsetY + eyeSize * 1.2, headSize * 0.5, headSize * 0.08);
     
-    // === ПИСТОЛЕТ В ПРАВОЙ РУКЕ ===
-    const gunAngle = typeof lastShotAngle !== 'undefined' ? lastShotAngle : 0;
-    const gunX = w/2 - armWidth * 0.2; // Позиция относительно центра игрока
-    const gunY = -h * 0.1;
-    
-    ctx.save();
-    ctx.translate(gunX, gunY);
-    ctx.rotate(gunAngle);
-    
-    // Рука держит пистолет (правая рука)
-    ctx.fillStyle = "#4a90e2";
-    ctx.fillRect(-armWidth * 0.6, -armHeight * 0.1, armWidth, armHeight * 0.7);
-    
-    // Рукоятка пистолета (черная)
-    ctx.fillStyle = "#1a1a1a";
-    ctx.fillRect(-4, 2, 7, 10);
-    
-    // Корпус пистолета (темно-серый)
-    ctx.fillStyle = "#2a2a2a";
-    ctx.fillRect(-3, -2, 10, 4);
-    
-    // Ствол пистолета (черный)
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(7, -1.5, 12, 3);
-    
-    // Детали: спусковая скоба
-    ctx.fillStyle = "#1a1a1a";
-    ctx.fillRect(-2, 8, 6, 2);
-    
-    // Вспышка выстрела (если активна) - только на пистолете
-    if (typeof muzzleFlash !== 'undefined' && muzzleFlash > 0) {
+    // === ВСПЫШКА ВЫСТРЕЛА (если активна) - рисуем перед игроком ===
+    if (typeof muzzleFlash !== 'undefined' && muzzleFlash > 0 && typeof lastShotAngle !== 'undefined') {
         const flashAlpha = Math.min(1, muzzleFlash / 3);
         ctx.globalAlpha = flashAlpha;
+        
+        // Позиция вспышки перед игроком
+        const flashDistance = headSize * 0.6;
+        const flashX = Math.cos(lastShotAngle) * flashDistance;
+        const flashY = Math.sin(lastShotAngle) * flashDistance;
+        const flashSize = headSize * 0.4;
+        
+        ctx.save();
+        ctx.translate(flashX, flashY);
+        ctx.rotate(lastShotAngle);
+        
         // Яркая вспышка
         ctx.fillStyle = "#ffd42a";
-        ctx.fillRect(19, -2.5, 8, 5);
+        ctx.fillRect(0, -flashSize/2, flashSize * 1.5, flashSize);
         ctx.fillStyle = "#ffaa00";
-        ctx.fillRect(22, -1.5, 5, 3);
+        ctx.fillRect(flashSize * 0.3, -flashSize/3, flashSize, flashSize * 0.6);
+        
+        ctx.restore();
         ctx.globalAlpha = 1.0;
     }
-    
-    ctx.restore();
-    
-    // Правая рука (часть, не держащая пистолет)
-    ctx.fillStyle = "#4a90e2";
-    ctx.fillRect(w/2 - armWidth * 0.5, -h * 0.2, armWidth, armHeight * 0.3);
-
-    // === НОГИ (синие квадраты) ===
-    const legWidth = w * 0.25;
-    const legHeight = h * 0.35;
-    ctx.fillStyle = "#2a5a92";
-    ctx.fillRect(-w * 0.25, h/2 - legHeight * 0.3, legWidth, legHeight);
-    ctx.fillRect(w * 0.25 - legWidth, h/2 - legHeight * 0.3, legWidth, legHeight);
 
     ctx.restore();
 }

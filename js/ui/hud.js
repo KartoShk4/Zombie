@@ -59,19 +59,36 @@ function renderHUD(ctx) {
         ctx.fillRect(pauseBtnX + pauseBtnSize * 0.5, pauseBtnY, pauseBtnSize * 0.25, pauseBtnSize);
     }
 
-    // === 4. СЧЕТ И ВОЛНА (справа вверху, ниже кнопки паузы) ===
+    // === 4. СЧЕТ, ВОЛНА, ЗОМБИ И МОНЕТКИ (справа вверху, ниже кнопки паузы) ===
     const cssW = canvas.clientWidth || window.innerWidth;
     ctx.fillStyle = "white";
     ctx.textAlign = "right";
     const rightX = cssW - 15; // Прямо у правого края
     const scoreY = isMobile ? 55 : 15; // Ниже кнопки паузы на мобильных
     const waveY = isMobile ? 70 : 30; // Ниже счета
+    const zombiesY = isMobile ? 85 : 45; // Ниже волны
+    const coinsY = isMobile ? 100 : 60; // Ниже зомби
+    
     ctx.fillText("Score: " + score, rightX, scoreY);
     ctx.fillText("Wave: " + wave, rightX, waveY);
+    
+    // Общее количество зомби
+    if (typeof totalZombiesSpawned !== 'undefined') {
+        ctx.fillStyle = "#ff6666";
+        ctx.fillText("Zombies: " + totalZombiesSpawned, rightX, zombiesY);
+    }
+    
+    // Монетки (золотым цветом)
+    if (typeof getCoins === 'function') {
+        ctx.fillStyle = "#ffd700";
+        ctx.fillText("🪙 " + getCoins(), rightX, coinsY);
+    }
+    
     ctx.textAlign = "left";
 
     // === 5. ЗВАНИЕ (показывается только при получении, по центру, ниже верхних элементов) ===
-    if (typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank) {
+    const rankShowing = typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank;
+    if (rankShowing) {
         ctx.save();
         ctx.textAlign = "center";
         ctx.font = "12px 'Press Start 2P'";
@@ -89,16 +106,102 @@ function renderHUD(ctx) {
         ctx.restore();
     }
 
-    // === 6. ТАЙМЕР ВОЛНЫ (по центру, ниже звания или ниже верхних элементов) ===
+    // === 6. ДОСТИЖЕНИЕ (показывается только при получении, по центру, ниже звания или верхних элементов) ===
+    const achievementShowing = typeof achievementDisplayTime !== 'undefined' && achievementDisplayTime > 0 && typeof currentDisplayAchievement !== 'undefined' && currentDisplayAchievement;
+    if (achievementShowing) {
+        ctx.save();
+        ctx.textAlign = "center";
+        
+        // Плавное появление/исчезание
+        const alpha = Math.min(1, achievementDisplayTime / 0.5);
+        ctx.globalAlpha = alpha > 0.3 ? 1 : alpha / 0.3;
+        
+        const cssW = canvas.clientWidth || window.innerWidth;
+        // Позиционируем ниже звания, если оно показывается, иначе ниже верхних элементов
+        const baseAchievementY = isMobile ? 95 : 60;
+        const achievementY = rankShowing ? baseAchievementY + 20 : baseAchievementY;
+        
+        // Размеры рамки
+        const framePadding = 12;
+        const frameWidth = 200;
+        const frameHeight = 60;
+        const frameX = cssW / 2 - frameWidth / 2;
+        const frameY = achievementY - frameHeight / 2;
+        
+        // Золотая рамка (внешняя)
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(frameX - 2, frameY - 2, frameWidth + 4, frameHeight + 4);
+        
+        // Золотая рамка (внутренняя)
+        ctx.strokeStyle = "#ffaa00";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(frameX, frameY, frameWidth, frameHeight);
+        
+        // Фон рамки (полупрозрачный черный)
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillRect(frameX, frameY, frameWidth, frameHeight);
+        
+        // Текст "Новое достижение"
+        ctx.font = "8px 'Press Start 2P'";
+        ctx.fillStyle = "#ffd700";
+        ctx.fillText("НОВОЕ ДОСТИЖЕНИЕ", cssW / 2, frameY + 12);
+        
+        // Иконка достижения
+        ctx.font = "16px 'Press Start 2P'";
+        ctx.fillStyle = "#ffd700";
+        ctx.fillText(currentDisplayAchievement.icon || "🏆", cssW / 2, frameY + 28);
+        
+        // Название достижения
+        ctx.font = "9px 'Press Start 2P'";
+        ctx.fillStyle = "#ffd700";
+        ctx.fillText(currentDisplayAchievement.name, cssW / 2, frameY + 48);
+        
+        ctx.restore();
+    }
+
+    // === 7. УВЕДОМЛЕНИЕ О ДОСТУПНОМ УЛУЧШЕНИИ (только во время игры, не в паузе) ===
+    const upgradeNotificationShowing = typeof upgradeNotificationTime !== 'undefined' && upgradeNotificationTime > 0 && !isPaused;
+    if (upgradeNotificationShowing) {
+        ctx.save();
+        ctx.textAlign = "center";
+        
+        // Плавное появление/исчезание
+        const alpha = Math.min(1, upgradeNotificationTime / 0.5);
+        ctx.globalAlpha = alpha > 0.3 ? 1 : alpha / 0.3;
+        
+        const cssW = canvas.clientWidth || window.innerWidth;
+        const cssH = canvas.clientHeight || window.innerHeight;
+        const notificationY = cssH - 80; // Внизу экрана, выше джойстика
+        
+        // Фон уведомления
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillRect(cssW / 2 - 150, notificationY - 15, 300, 30);
+        
+        // Рамка
+        ctx.strokeStyle = "#ffd700";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cssW / 2 - 150, notificationY - 15, 300, 30);
+        
+        // Текст уведомления
+        ctx.font = "10px 'Press Start 2P'";
+        ctx.fillStyle = "#ffd700";
+        ctx.fillText("Доступно улучшение", cssW / 2, notificationY);
+        
+        ctx.restore();
+    }
+
+    // === 8. ТАЙМЕР ВОЛНЫ (по центру, ниже звания/достижения или ниже верхних элементов) ===
     if (isWaveCooldown) {
-        // Проверяем, не показывается ли звание, чтобы не перекрыться
-        const rankShowing = typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank;
         ctx.textAlign = "center";
         ctx.font = "10px 'Press Start 2P'";
-        // Если показывается звание, сдвигаем таймер ниже, иначе показываем ниже верхних элементов
         const cssW = canvas.clientWidth || window.innerWidth;
         const baseTimerY = isMobile ? 95 : 60;
-        const timerY = rankShowing ? baseTimerY + 20 : baseTimerY;
+        // Сдвигаем таймер ниже, если показывается звание или достижение
+        let offset = 0;
+        if (rankShowing) offset += 20;
+        if (achievementShowing) offset += 38; // Высота достижения (иконка + текст)
+        const timerY = baseTimerY + offset;
         ctx.fillText("Next: " + Math.ceil(waveTimer), cssW / 2, timerY);
         ctx.textAlign = "left";
     }

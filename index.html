@@ -32,6 +32,7 @@
 
         <button class="menu-btn" id="continue-btn" onclick="startGame(true)" style="display: none;">▶ Продолжить</button>
         <button class="menu-btn" onclick="startGame(false)">▶ Новая игра</button>
+        <button class="menu-btn" onclick="openShopFromMenu()">🛒 Магазин</button>
         <button class="menu-btn" onclick="openLeaderboard()">🏆 Рейтинг</button>
         <button class="menu-btn" onclick="openAchievements()">🎖️ Достижения</button>
         <button class="menu-btn" onclick="openSettings()">⚙ Настройки</button>
@@ -43,6 +44,12 @@
 <div id="settings-menu" class="menu hidden">
     <div class="menu-content">
         <h2 class="title">Настройки</h2>
+        
+        <div style="margin: 30px 0;">
+            <h3 style="font-size: 18px; color: #ff4444; margin-bottom: 20px;">Никнейм</h3>
+            <input type="text" id="settings-nickname-input" class="nickname-input" maxlength="20" placeholder="Ваш никнейм">
+            <button class="menu-btn" onclick="saveSettingsNickname()" style="width: 200px; margin-top: 10px;">Сохранить никнейм</button>
+        </div>
         
         <div style="margin: 30px 0;">
             <h3 style="font-size: 18px; color: #ff4444; margin-bottom: 20px;">Уровень сложности</h3>
@@ -121,12 +128,43 @@
     </div>
 </div>
 
+<!-- Предупреждение о новой игре -->
+<div id="new-game-warning" class="menu hidden">
+    <div class="menu-content">
+        <h2 class="title" style="color: #ff4444;">⚠️ ВНИМАНИЕ!</h2>
+        <p class="text" style="font-size: 12px; line-height: 1.8; margin: 20px 0;">
+            Начав новую игру, вы потеряете весь текущий прогресс:<br><br>
+            • Текущая волна и счет<br>
+            • Сохранение игры<br>
+            • Все монетки, собранные в этой сессии<br><br>
+            Вы уверены, что хотите продолжить?
+        </p>
+        <button class="menu-btn" onclick="confirmNewGame()" style="background: #ff4444; border-color: #ff6666;">Да, начать новую игру</button>
+        <button class="menu-btn" onclick="cancelNewGame()">Отмена</button>
+    </div>
+</div>
+
+<!-- Магазин (после волны) -->
+<div id="shop-menu" class="menu hidden">
+    <div class="menu-content">
+        <h2 class="title">🛒 МАГАЗИН</h2>
+        <p class="text" style="font-size: 12px; margin-bottom: 20px;">
+            Монетки: <span id="shop-coins-display" style="color: #ffd700;">0</span>
+        </p>
+        <div id="shop-content" style="max-height: 400px; overflow-y: auto; margin: 20px 0;">
+            <!-- Содержимое магазина будет добавлено динамически -->
+        </div>
+        <button class="menu-btn" id="shop-close-btn" onclick="closeShop()">Продолжить игру</button>
+    </div>
+</div>
+
 <!-- Скрипты -->
 <!-- Конфигурация и основная логика -->
 <script src="js/core/config.js" defer></script>
 <script src="js/core/difficulty.js" defer></script>
 <script src="js/core/user.js" defer></script>
 <script src="js/core/achievements.js" defer></script>
+<script src="js/core/upgrades.js" defer></script>
 <script src="js/core/save.js" defer></script>
 <script src="js/core/main.js" defer></script>
 
@@ -139,6 +177,8 @@
 <script src="js/entities/zombies.js" defer></script>
 <script src="js/entities/bullets.js" defer></script>
 <script src="js/entities/hearts.js" defer></script>
+<script src="js/entities/coins.js" defer></script>
+<script src="js/entities/obstacles.js" defer></script>
 
 <!-- Интерфейс -->
 <script src="js/ui/pixel_heart.js" defer></script>

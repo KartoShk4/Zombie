@@ -94,6 +94,17 @@ function saveGame() {
                 healAmount: h.healAmount,
                 pulse: h.pulse,
                 lifetime: h.lifetime
+            })) : [],
+            
+            // Монетки (если система доступна)
+            coins: (typeof coins !== 'undefined' && coins) ? coins.map(c => ({
+                x: c.x,
+                y: c.y,
+                size: c.size,
+                value: c.value,
+                rotation: c.rotation,
+                pulse: c.pulse,
+                lifetime: c.lifetime
             })) : []
         };
         
@@ -199,6 +210,11 @@ function restoreGame(saveData) {
     // Восстанавливаем сердечки (если система доступна)
     if (typeof hearts !== 'undefined' && saveData.hearts) {
         hearts = saveData.hearts;
+    }
+    
+    // Восстанавливаем монетки (если система доступна)
+    if (typeof coins !== 'undefined' && saveData.coins) {
+        coins = saveData.coins;
     }
     
     console.log('Игра загружена');

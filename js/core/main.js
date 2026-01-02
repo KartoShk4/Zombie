@@ -20,8 +20,40 @@ let camera = { x: 0, y: 0 };  // Позиция камеры
  * Запуск игры - скрывает меню и инициализирует игру
  * @param {boolean} loadFromSave - Загружать ли из сохранения
  */
+// Флаг для отслеживания подтверждения новой игры
+let newGameConfirmed = false;
+
+/**
+ * Подтверждение начала новой игры
+ */
+function confirmNewGame() {
+    newGameConfirmed = true;
+    document.getElementById("new-game-warning").classList.add("hidden");
+    startGame(false);
+}
+
+/**
+ * Отмена начала новой игры
+ */
+function cancelNewGame() {
+    newGameConfirmed = false;
+    document.getElementById("new-game-warning").classList.add("hidden");
+    document.getElementById("main-menu").classList.remove("hidden");
+}
+
 function startGame(loadFromSave = false) {
+    // Если новая игра и есть сохранение, показываем модальное окно
+    if (!loadFromSave && typeof hasSave === 'function' && hasSave() && !newGameConfirmed) {
+        document.getElementById("main-menu").classList.add("hidden");
+        document.getElementById("new-game-warning").classList.remove("hidden");
+        return; // Ждем подтверждения
+    }
+    
+    // Сбрасываем флаг подтверждения
+    newGameConfirmed = false;
+    
     document.getElementById("main-menu").classList.add("hidden");
+    document.getElementById("new-game-warning").classList.add("hidden");
     canvas.classList.add("game-active"); // Показываем canvas
     gameStarted = true;
     isPaused = false;
@@ -31,6 +63,11 @@ function startGame(loadFromSave = false) {
         const saveData = loadGame();
         if (saveData) {
             restoreGame(saveData);
+        }
+        
+        // Применяем улучшения после загрузки
+        if (typeof applyUpgrades === 'function') {
+            applyUpgrades();
         }
     } else {
         // НОВАЯ ИГРА - полностью сбрасываем состояние
@@ -49,6 +86,12 @@ function startGame(loadFromSave = false) {
         waveTimer = 0;
         rankDisplayTime = 0;
         currentDisplayRank = null;
+        achievementDisplayTime = 0;
+        currentDisplayAchievement = null;
+        pendingAchievements = [];
+        upgradeNotificationTime = 0;
+        lastUpgradeCheckTime = 0;
+        coinSpawnTimer = 0;
         if (typeof getRankByScore === 'function') {
             lastRankScore = getRankByScore(0).minScore;
         } else {
@@ -61,6 +104,7 @@ function startGame(loadFromSave = false) {
         footprints = [];
         blood = [];
         if (typeof hearts !== 'undefined') hearts = [];
+        if (typeof coins !== 'undefined') coins = [];
         
         // Сбрасываем счетчик ID зомби
         if (typeof nextZombieId !== 'undefined') {
@@ -74,6 +118,30 @@ function startGame(loadFromSave = false) {
         
         // Применяем сложность к игроку (только при новой игре)
         applyDifficultyToPlayer();
+        
+        // Применяем улучшения
+        if (typeof applyUpgrades === 'function') {
+            applyUpgrades();
+        }
+        
+        // Инициализируем таймер случайного спавна монеток
+        coinSpawnTimer = 5 + Math.random() * 5; // Первая монетка через 5-10 секунд
+        
+        // Очищаем монетки при новой игре
+        if (typeof coins !== 'undefined') coins = [];
+        
+        // Сбрасываем счетчик зомби
+        if (typeof totalZombiesSpawned !== 'undefined') {
+            totalZombiesSpawned = 0;
+        }
+        
+        // Сбрасываем флаг уведомления
+        upgradeNotificationShownThisWave = false;
+        
+        // Генерируем препятствия
+        if (typeof generateObstacles === 'function') {
+            generateObstacles();
+        }
         
         // Запускаем первую волну
         isWaveActive = false;
@@ -138,6 +206,33 @@ function updateDifficultyUI() {
             btn.style.borderColor = "#555";
         }
     });
+    
+    // Обновляем никнейм в настройках
+    if (typeof getNickname === 'function') {
+        const nicknameInput = document.getElementById("settings-nickname-input");
+        if (nicknameInput) {
+            nicknameInput.value = getNickname();
+        }
+    }
+}
+
+/**
+ * Сохранение никнейма из настроек
+ */
+function saveSettingsNickname() {
+    const input = document.getElementById("settings-nickname-input");
+    if (input && typeof setNickname === 'function') {
+        const nickname = input.value.trim();
+        if (nickname) {
+            setNickname(nickname);
+            if (typeof updateGreeting === 'function') {
+                updateGreeting();
+            }
+            alert("Никнейм сохранен!");
+        } else {
+            alert("Введите никнейм!");
+        }
+    }
 }
 
 /**
@@ -330,6 +425,13 @@ let lastShotAngle = 0;           // Угол последнего выстрел
 let rankDisplayTime = 0;         // Время отображения звания (0 = скрыто)
 let currentDisplayRank = null;   // Текущее отображаемое звание
 let lastRankScore = 0;           // Очки при последнем звании
+let achievementDisplayTime = 0;  // Время отображения достижения (0 = скрыто)
+let currentDisplayAchievement = null;  // Текущее отображаемое достижение
+let pendingAchievements = [];  // Очередь достижений для показа
+let upgradeNotificationTime = 0;  // Время отображения уведомления о доступном улучшении
+let lastUpgradeCheckTime = 0;  // Время последней проверки доступных улучшений
+let coinSpawnTimer = 0;  // Таймер для случайного спавна монеток
+let upgradeNotificationShownThisWave = false;  // Показывалось ли уведомление в текущей волне
 
 // ===== РЕНДЕРИНГ ЭФФЕКТОВ =====
 
@@ -460,12 +562,147 @@ checkOrientation();
 // ===== УПРАВЛЕНИЕ ВОЛНАМИ =====
 
 /**
+ * Проверка доступных улучшений
+ * @returns {boolean} true если есть доступные улучшения
+ */
+function hasAvailableUpgrades() {
+    if (typeof getAllUpgrades === 'function' && typeof getUpgradeLevel === 'function' && typeof getUpgradeCost === 'function' && typeof getCoins === 'function') {
+        const allUpgrades = getAllUpgrades();
+        const coins = getCoins();
+        
+        for (let upgrade of allUpgrades) {
+            const level = getUpgradeLevel(upgrade.id);
+            const cost = getUpgradeCost(upgrade.id);
+            
+            if (level < upgrade.maxLevel && coins >= cost) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
  * Запуск перерыва между волнами
  */
 function startWaveCooldown() {
     isWaveActive = false;
     isWaveCooldown = true;
     waveTimer = waveCooldownTime;
+    
+    // Показываем магазин после волны только если есть доступные улучшения
+    if (gameStarted && !isPaused) {
+        setTimeout(() => {
+            if (gameStarted && !isPaused && hasAvailableUpgrades()) {
+                openShop();
+            }
+        }, 500);
+    }
+}
+
+/**
+ * Открытие магазина
+ */
+function openShop() {
+    if (typeof getAllUpgrades === 'function' && typeof getUpgradeLevel === 'function' && typeof getUpgradeCost === 'function') {
+        const shopContent = document.getElementById("shop-content");
+        const coinsDisplay = document.getElementById("shop-coins-display");
+        const closeBtn = document.getElementById("shop-close-btn");
+        
+        if (shopContent && coinsDisplay && typeof getCoins === 'function') {
+            // Обновляем количество монет
+            coinsDisplay.textContent = getCoins();
+            
+            // Обновляем текст кнопки закрытия
+            if (closeBtn) {
+                if (gameStarted) {
+                    closeBtn.textContent = "Продолжить игру";
+                    closeBtn.onclick = closeShop;
+                } else {
+                    closeBtn.textContent = "Назад";
+                    closeBtn.onclick = closeShopToMenu;
+                }
+            }
+            
+            // Генерируем список улучшений
+            let html = '';
+            const allUpgrades = getAllUpgrades();
+            
+            allUpgrades.forEach(upgrade => {
+                const level = getUpgradeLevel(upgrade.id);
+                const cost = getUpgradeCost(upgrade.id);
+                const isMaxLevel = level >= upgrade.maxLevel;
+                const canAfford = typeof getCoins === 'function' && getCoins() >= cost;
+                
+                html += `<div style="padding: 10px; margin: 5px 0; background: rgba(255, 255, 255, 0.05); border: 2px solid ${canAfford && !isMaxLevel ? '#ffd700' : '#555'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 14px; color: #ffd700;">${upgrade.icon} ${upgrade.name}</div>
+                            <div style="font-size: 10px; color: #aaa; margin-top: 5px;">${upgrade.desc}</div>
+                            <div style="font-size: 9px; color: #888; margin-top: 3px;">Уровень: ${level}/${upgrade.maxLevel}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            ${isMaxLevel ? 
+                                '<div style="color: #4a4; font-size: 12px;">МАКС</div>' :
+                                `<div style="color: ${canAfford ? '#ffd700' : '#888'}; font-size: 12px;">${cost} 🪙</div>
+                                <button class="menu-btn" onclick="buyUpgradeFromShop('${upgrade.id}')" style="width: 120px; padding: 8px; font-size: 10px; margin-top: 5px; ${canAfford ? '' : 'opacity: 0.5;'}">Купить</button>`
+                            }
+                        </div>
+                    </div>
+                </div>`;
+            });
+            
+            shopContent.innerHTML = html;
+        }
+    }
+    
+    document.getElementById("shop-menu").classList.remove("hidden");
+    if (gameStarted) {
+        isPaused = true; // Паузим игру при открытии магазина только если игра запущена
+    }
+}
+
+/**
+ * Закрытие магазина
+ */
+function closeShop() {
+    document.getElementById("shop-menu").classList.add("hidden");
+    if (gameStarted) {
+        isPaused = false; // Возобновляем игру только если игра запущена
+    }
+}
+
+/**
+ * Покупка улучшения из магазина
+ */
+function buyUpgradeFromShop(upgradeId) {
+    if (typeof buyUpgrade === 'function') {
+        const success = buyUpgrade(upgradeId);
+        if (success) {
+            // Скрываем уведомление, так как улучшение куплено
+            upgradeNotificationTime = 0;
+            // Обновляем магазин
+            openShop();
+        } else {
+            alert("Недостаточно монет или достигнут максимальный уровень!");
+        }
+    }
+}
+
+/**
+ * Открытие магазина из главного меню
+ */
+function openShopFromMenu() {
+    document.getElementById("main-menu").classList.add("hidden");
+    openShop();
+}
+
+/**
+ * Закрытие магазина с возвратом в меню (если открыт из меню)
+ */
+function closeShopToMenu() {
+    closeShop();
+    document.getElementById("main-menu").classList.remove("hidden");
 }
 
 // ===== ОБНОВЛЕНИЕ ИГРЫ =====
@@ -480,6 +717,7 @@ function update() {
     updateZombies();
     updateBullets();
     if (typeof updateHearts === 'function') updateHearts();
+    if (typeof updateCoins === 'function') updateCoins();
 
     // Обработка перерыва между волнами
     if (isWaveCooldown) {
@@ -527,14 +765,17 @@ function update() {
             totalKills: zombiesKilled,
             maxScore: score,
             perfectWaves: 0,
-            totalCoins: typeof getCoins === 'function' ? getCoins() : 0,
+            totalCoins: typeof getCoins === 'function' ? getCoins() : 0, // Монетки сохраняются между играми
             healed: 0,
             maxCombo: 0,
             superKills: 0,
             totalTime: 0
         };
         const newAchievements = checkAchievements(stats);
-        // TODO: показать новые достижения на экране
+        // Добавляем новые достижения в очередь для показа
+        if (newAchievements.length > 0) {
+            pendingAchievements.push(...newAchievements);
+        }
     }
     
     // Проверка нового звания
@@ -554,6 +795,78 @@ function update() {
         if (rankDisplayTime <= 0) {
             rankDisplayTime = 0;
             currentDisplayRank = null;
+        }
+    }
+    
+    // Обновление времени отображения достижения
+    if (achievementDisplayTime > 0) {
+        achievementDisplayTime -= 1 / 60; // Уменьшаем каждый кадр (60 FPS)
+        if (achievementDisplayTime <= 0) {
+            achievementDisplayTime = 0;
+            currentDisplayAchievement = null;
+            
+            // Показываем следующее достижение из очереди, если есть
+            if (pendingAchievements.length > 0) {
+                currentDisplayAchievement = pendingAchievements.shift();
+                achievementDisplayTime = 3.0; // Показываем 3 секунды
+            }
+        }
+    } else if (pendingAchievements.length > 0 && currentDisplayAchievement === null) {
+        // Если нет активного достижения, показываем первое из очереди
+        currentDisplayAchievement = pendingAchievements.shift();
+        achievementDisplayTime = 3.0; // Показываем 3 секунды
+    }
+    
+    // Проверка доступных улучшений (каждые 2 секунды) - только во время игры, не в паузе
+    if (!isPaused && gameStarted) {
+        const now = performance.now() / 1000;
+        if (now - lastUpgradeCheckTime > 2) {
+            lastUpgradeCheckTime = now;
+            if (hasAvailableUpgrades() && !upgradeNotificationShownThisWave) {
+                // Показываем уведомление только если его еще нет и не показывали в этой волне
+                if (upgradeNotificationTime <= 0) {
+                    upgradeNotificationTime = 3.0; // Показываем 3 секунды
+                    upgradeNotificationShownThisWave = true; // Помечаем, что показали в этой волне
+                }
+            } else {
+                // Если улучшений нет, скрываем уведомление
+                upgradeNotificationTime = 0;
+            }
+        }
+        
+        // Обновление времени отображения уведомления об улучшении
+        if (upgradeNotificationTime > 0) {
+            upgradeNotificationTime -= 1 / 60;
+            if (upgradeNotificationTime <= 0) {
+                upgradeNotificationTime = 0;
+            }
+        }
+        
+        // Случайный спавн монеток (каждые 10-20 секунд) - только во время игры
+        coinSpawnTimer -= 1 / 60;
+        if (coinSpawnTimer <= 0 && typeof spawnCoin === 'function') {
+            coinSpawnTimer = 10 + Math.random() * 10; // 10-20 секунд
+            
+            // Спавним монетку в видимой области вокруг игрока
+            const cssW = canvas.clientWidth || window.innerWidth;
+            const cssH = canvas.clientHeight || window.innerHeight;
+            
+            // Спавним в области вокруг игрока (в пределах видимости камеры)
+            const spawnRadius = Math.max(cssW, cssH) * 0.6; // Радиус спавна (в пределах видимости)
+            const minDistance = 150; // Минимальное расстояние от игрока
+            const maxDistance = spawnRadius; // Максимальное расстояние от игрока
+            
+            // Случайный угол и расстояние
+            const angle = Math.random() * Math.PI * 2;
+            const distance = minDistance + Math.random() * (maxDistance - minDistance);
+            let x = player.x + Math.cos(angle) * distance;
+            let y = player.y + Math.sin(angle) * distance;
+            
+            // Ограничиваем границами мира
+            x = Math.max(50, Math.min(x, WORLD_WIDTH - 50));
+            y = Math.max(50, Math.min(y, WORLD_HEIGHT - 50));
+            
+            spawnCoin(x, y);
         }
     }
 }
@@ -605,10 +918,14 @@ function render() {
 
     // Вспышка при выстреле теперь отрисовывается на пистолете в renderPlayer
 
-    // 4. Игровые объекты (следы, кровь, сердечки, игрок, зомби, пули)
+    // 4. Препятствия (рисуются перед игроком и зомби)
+    if (typeof renderObstacles === 'function') renderObstacles(ctx);
+    
+    // 5. Игровые объекты (следы, кровь, сердечки, монетки, игрок, зомби, пули)
     renderFootprints(ctx);
     renderBlood(ctx);
     if (typeof renderHearts === 'function') renderHearts(ctx);
+    if (typeof renderCoins === 'function') renderCoins(ctx);
     
     // Радиус стрельбы (белая полупрозрачная рамка)
     // Теперь рисуем в CSS-пикселях, поэтому используем обычный arc с одинаковыми радиусами
@@ -807,162 +1124,56 @@ function saveAndQuit() {
 // ===== ГЕНЕРАЦИЯ ФОНА =====
 
 /**
- * Генерация статического фона (трава, земля, камни)
- * С каждой волной: меньше травы, больше земли, потом больше камня
+ * Генерация статического фона (пиксельная трава)
  */
 function generateStaticBackground() {
+    // Проверяем, что canvas инициализирован
+    if (!backgroundCanvas || !backgroundCtx) {
+        console.error('Background canvas не инициализирован!');
+        return;
+    }
+    
     const ctx = backgroundCtx;
     const w = backgroundCanvas.width;
     const h = backgroundCanvas.height;
+    
+    // Проверяем, что размеры валидны
+    if (w <= 0 || h <= 0) {
+        console.error('Неверные размеры background canvas:', w, h);
+        return;
+    }
 
-    const waveLevel = Math.min(wave || 1, 15); // Ограничиваем для плавной прогрессии
-    const progress = Math.min(waveLevel / 15, 1); // Нормализуем от 0 до 1 (0 = волна 1, 1 = волна 15+)
+    // === ПИКСЕЛЬНАЯ ТРАВА (зеленый фон) ===
+    // Базовый зеленый цвет травы
+    const baseGreen = { r: 60, g: 100, b: 40 };
     
-    // === БАЗОВЫЙ ГРАДИЕНТ (начинается с зеленого, постепенно темнеет) ===
-    const grd = ctx.createLinearGradient(0, 0, 0, h);
-    
-    // Начальные цвета (волна 1): зеленый, как трава
-    const startR = 85;
-    const startG = 110;
-    const startB = 60;
-    
-    // Конечные цвета (поздние волны): темная земля
-    const endR = 60;
-    const endG = 50;
-    const endB = 40;
-    
-    // Интерполяция между начальным и конечным цветом
-    const r1 = Math.floor(startR + (endR - startR) * progress);
-    const g1 = Math.floor(startG + (endG - startG) * progress);
-    const b1 = Math.floor(startB + (endB - startB) * progress);
-    
-    const r2 = Math.floor(r1 * 0.85);
-    const g2 = Math.floor(g1 * 0.85);
-    const b2 = Math.floor(b1 * 0.85);
-    
-    grd.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
-    grd.addColorStop(1, `rgb(${r2}, ${g2}, ${b2})`);
-    ctx.fillStyle = grd;
+    // Заливаем фон базовым зеленым
+    ctx.fillStyle = `rgb(${baseGreen.r}, ${baseGreen.g}, ${baseGreen.b})`;
     ctx.fillRect(0, 0, w, h);
-
-    // === ПЯТНА ТРАВЫ (уменьшаются с каждой волной, реалистичные) ===
-    const grassCount = Math.floor(250 - (250 - 20) * progress);
-    for (let i = 0; i < grassCount; i++) {
-        const x = Math.random() * w;
-        const y = Math.random() * h;
-        const r = 15 + Math.random() * 25;
-        const alpha = Math.max(0.02, (0.1 + Math.random() * 0.1) * (1 - progress * 0.7));
-
-        // Градиент для травы (от светлого к темному)
-        const grassGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
-        const grassGreen = 60 + Math.random() * 40;
-        grassGrad.addColorStop(0, `rgba(${grassGreen + 30}, ${grassGreen + 50}, ${grassGreen + 10}, ${alpha * 1.5})`);
-        grassGrad.addColorStop(0.6, `rgba(${grassGreen}, ${grassGreen + 30}, ${grassGreen}, ${alpha})`);
-        grassGrad.addColorStop(1, `rgba(${grassGreen - 20}, ${grassGreen + 10}, ${grassGreen - 20}, ${alpha * 0.5})`);
-        
-        ctx.fillStyle = grassGrad;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Дополнительные мелкие пятна для текстуры
-        if (Math.random() > 0.7) {
-            ctx.fillStyle = `rgba(${grassGreen + 20}, ${grassGreen + 40}, ${grassGreen + 5}, ${alpha * 0.6})`;
-            ctx.beginPath();
-            ctx.arc(x + (Math.random() - 0.5) * r, y + (Math.random() - 0.5) * r, r * 0.4, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-
-    // === ПЯТНА ЗЕМЛИ (увеличиваются с каждой волной, реалистичные) ===
-    const dirtCount = Math.floor(80 + (350 - 80) * progress);
-    for (let i = 0; i < dirtCount; i++) {
-        const x = Math.random() * w;
-        const y = Math.random() * h;
-        const r = 12 + Math.random() * 25;
-        const alpha = 0.06 + Math.random() * 0.08 + progress * 0.04;
-
-        // Цвет земли темнеет с прогрессией
-        const dirtR = Math.floor(75 + progress * 25);
-        const dirtG = Math.floor(65 - progress * 20);
-        const dirtB = Math.floor(45 - progress * 15);
-        
-        // Градиент для земли
-        const dirtGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
-        dirtGrad.addColorStop(0, `rgba(${dirtR + 10}, ${dirtG + 10}, ${dirtB + 5}, ${alpha * 1.2})`);
-        dirtGrad.addColorStop(0.7, `rgba(${dirtR}, ${dirtG}, ${dirtB}, ${alpha})`);
-        dirtGrad.addColorStop(1, `rgba(${dirtR - 15}, ${dirtG - 15}, ${dirtB - 10}, ${alpha * 0.7})`);
-        
-        ctx.fillStyle = dirtGrad;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Дополнительная текстура
-        if (Math.random() > 0.6) {
-            ctx.fillStyle = `rgba(${dirtR - 10}, ${dirtG - 10}, ${dirtB - 5}, ${alpha * 0.8})`;
-            ctx.beginPath();
-            ctx.arc(x + (Math.random() - 0.5) * r * 0.8, y + (Math.random() - 0.5) * r * 0.8, r * 0.5, 0, Math.PI * 2);
-            ctx.fill();
+    
+    // Пиксельная текстура травы (квадраты разных оттенков зеленого)
+    const pixelSize = 4; // Размер пикселя
+    for (let y = 0; y < h; y += pixelSize) {
+        for (let x = 0; x < w; x += pixelSize) {
+            // Случайные вариации зеленого
+            const variation = (Math.random() - 0.5) * 30;
+            const r = Math.max(40, Math.min(80, baseGreen.r + variation));
+            const g = Math.max(80, Math.min(120, baseGreen.g + variation));
+            const b = Math.max(30, Math.min(60, baseGreen.b + variation));
+            
+            ctx.fillStyle = `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
+            ctx.fillRect(x, y, pixelSize, pixelSize);
         }
     }
     
-    // === КРОВАВЫЕ ПЯТНА (появляются с 3+ волны) ===
-    if (waveLevel >= 3) {
-        const bloodCount = (waveLevel - 2) * 5;
-        for (let i = 0; i < bloodCount; i++) {
-            const x = Math.random() * w;
-            const y = Math.random() * h;
-            const r = 10 + Math.random() * 20;
-
-            ctx.fillStyle = `rgba(${100 + waveLevel * 5}, 0, 0, ${0.1 + Math.random() * 0.1})`;
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.fill();
+    // Генерируем препятствия (камни, земля, кусты, деревья, дорожки)
+    // Вызываем только если функция доступна
+    try {
+        if (typeof generateObstacles === 'function') {
+            generateObstacles();
         }
-    }
-
-    // === КАМНИ (увеличиваются с каждой волной, реалистичные) ===
-    const stoneCount = Math.floor(40 + (150 - 40) * progress);
-    for (let i = 0; i < stoneCount; i++) {
-        const x = Math.random() * w;
-        const y = Math.random() * h;
-        const baseR = 5 + Math.random() * 12;
-        const stoneGray = Math.floor(100 - progress * 25);
-
-        ctx.save();
-        ctx.translate(x, y);
-        
-        // Немного сплюснутая форма для реалистичности
-        const scaleX = 1;
-        const scaleY = 0.75 + Math.random() * 0.25;
-        ctx.scale(scaleX, scaleY);
-        const r = baseR;
-        
-        // Градиент для объема
-        const stoneGrad = ctx.createRadialGradient(-r * 0.4, -r * 0.4, 0, 0, 0, r * 1.2);
-        stoneGrad.addColorStop(0, `rgba(${stoneGray + 40}, ${stoneGray + 40}, ${stoneGray + 40}, ${0.4 + Math.random() * 0.3})`);
-        stoneGrad.addColorStop(0.5, `rgba(${stoneGray}, ${stoneGray}, ${stoneGray}, ${0.3 + Math.random() * 0.2})`);
-        stoneGrad.addColorStop(1, `rgba(${stoneGray - 30}, ${stoneGray - 30}, ${stoneGray - 30}, ${0.2 + Math.random() * 0.15})`);
-        
-        ctx.fillStyle = stoneGrad;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, r, r * 0.9, Math.random() * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Блик на камне
-        ctx.fillStyle = `rgba(180, 180, 180, ${0.3 + Math.random() * 0.2})`;
-        ctx.beginPath();
-        ctx.ellipse(-r * 0.4, -r * 0.3, r * 0.3, r * 0.25, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Тень
-        ctx.fillStyle = `rgba(${stoneGray - 40}, ${stoneGray - 40}, ${stoneGray - 40}, ${0.2 + Math.random() * 0.15})`;
-        ctx.beginPath();
-        ctx.ellipse(r * 0.3, r * 0.4, r * 0.4, r * 0.3, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.restore();
+    } catch (error) {
+        console.error('Ошибка при генерации препятствий:', error);
     }
 }
 
@@ -1055,6 +1266,12 @@ window.onload = () => {
     }
     if (typeof loadAchievements === 'function') {
         loadAchievements();
+    }
+    if (typeof loadUpgrades === 'function') {
+        loadUpgrades();
+    }
+    if (typeof applyUpgrades === 'function') {
+        applyUpgrades();
     }
     
     // Проверка никнейма (если система пользователя доступна)

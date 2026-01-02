@@ -51,7 +51,7 @@ function spawnWave(wave) {
             name: "tank",
             bodyColor: "#3b4f3b",
             headColor: "#2a3a2a",
-            size: 55,
+            size: 35,  // Уменьшено с 55
             speed: 0.4,
             health: 8,
             damage: 8,
@@ -91,7 +91,7 @@ function spawnWave(wave) {
             name: "brute",
             bodyColor: "#2a2a2a",
             headColor: "#1a1a1a",
-            size: 60,
+            size: 40,  // Уменьшено с 60
             speed: 0.6,
             health: 12,
             damage: 10,
@@ -216,6 +216,11 @@ function spawnWave(wave) {
         
         // Временно добавляем зомби без применения сложности
         zombies.push(zombie);
+        
+        // Увеличиваем счетчик общего количества заспавненных зомби
+        if (typeof totalZombiesSpawned !== 'undefined') {
+            totalZombiesSpawned++;
+        }
     }
     
     console.log(`Волна ${wave} создана, зомби в массиве: ${zombies.length}`);
@@ -344,71 +349,22 @@ function renderZombies(ctx) {
         ctx.translate(z.x, z.y);
 
         const w = z.width;
-        const h = z.height;
-        const r = z.size / 2;
+        const headSize = w * 1.0; // Голова равна размеру зомби (уменьшено)
 
-        // === ТЕЛО ЗОМБИ (квадрат) ===
-        ctx.fillStyle = z.bodyColor || "#4f6f4f";
-        ctx.fillRect(-w/2, -h/2, w, h);
-
-        // === РАНЫ НА ТЕЛЕ (темные квадраты) ===
-        if (z.hasWounds && z.woundCount > 0) {
-            ctx.fillStyle = "#1a1a1a";
-            for (let i = 0; i < z.woundCount; i++) {
-                const woundX = -w/4 + (i * w/4);
-                const woundY = -h/4 + Math.sin(z.step + i) * 5;
-                ctx.fillRect(woundX, woundY, w * 0.15, h * 0.15);
-            }
-        }
-
-        // === РУКИ (квадраты, тянутся к игроку) - РИСУЕМ ДО ГОЛОВЫ ===
-        const armWidth = w * 0.25;
-        const armHeight = h * 0.5;
-        ctx.fillStyle = z.bodyColor || "#4f6f4f";
-        
-        // Угол к игроку для направления рук
-        const angleToPlayer = Math.atan2(player.y - z.y, player.x - z.x);
-        const armReach = 0.3;
-        const leftArmX = -w/2 - armWidth * 0.3;
-        const rightArmX = w/2 - armWidth * 0.7;
-        const armY = -h * 0.2;
-        
-        // Левая рука
-        ctx.save();
-        ctx.translate(leftArmX + armWidth/2, armY + armHeight/2);
-        ctx.rotate(angleToPlayer - Math.PI/2);
-        ctx.fillRect(-armWidth/2, -armHeight/2, armWidth, armHeight);
-        ctx.restore();
-        
-        // Правая рука
-        ctx.save();
-        ctx.translate(rightArmX + armWidth/2, armY + armHeight/2);
-        ctx.rotate(angleToPlayer - Math.PI/2);
-        ctx.fillRect(-armWidth/2, -armHeight/2, armWidth, armHeight);
-        ctx.restore();
-
-        // === НОГИ (квадраты) - РИСУЕМ ДО ГОЛОВЫ ===
-        const legWidth = w * 0.3;
-        const legHeight = h * 0.4;
-        ctx.fillStyle = z.bodyColor || "#3a4a3a";
-        ctx.fillRect(-w * 0.3, h/2 - legHeight * 0.2, legWidth, legHeight);
-        ctx.fillRect(w * 0.3 - legWidth, h/2 - legHeight * 0.2, legWidth, legHeight);
-
-        // === ГОЛОВА (квадрат) - РИСУЕМ ПОСЛЕ РУК И НОГ ===
-        const headSize = w * 0.7;
+        // === ГОЛОВА (квадрат) ===
         ctx.fillStyle = z.headColor || "#3a4a3a";
-        ctx.fillRect(-headSize/2, -h/2 - headSize * 0.4, headSize, headSize);
+        ctx.fillRect(-headSize/2, -headSize/2, headSize, headSize);
 
         // === ВОЛОСЫ (если есть) ===
         if (z.hasHair) {
             ctx.fillStyle = "#2a2a2a";
-            ctx.fillRect(-headSize/2, -h/2 - headSize * 0.5, headSize, headSize * 0.2);
+            ctx.fillRect(-headSize/2, -headSize/2 - headSize * 0.15, headSize, headSize * 0.2);
         }
 
         // === ГЛАЗА (светящиеся квадраты) ===
-        const eyeSize = w * 0.15;
-        const eyeOffsetX = w * 0.2;
-        const eyeOffsetY = -h/2 - headSize * 0.25;
+        const eyeSize = headSize * 0.2;
+        const eyeOffsetX = headSize * 0.25;
+        const eyeOffsetY = -headSize * 0.15;
         
         ctx.fillStyle = z.eyeColor || "#ff2b2b";
         ctx.fillRect(-eyeOffsetX - eyeSize/2, eyeOffsetY - eyeSize/2, eyeSize, eyeSize);
@@ -416,42 +372,49 @@ function renderZombies(ctx) {
 
         // Зрачки — смотрят на игрока
         const angle = Math.atan2(player.y - z.y, player.x - z.x);
-        const px = Math.cos(angle) * eyeSize * 0.2;
-        const py = Math.sin(angle) * eyeSize * 0.2;
+        const px = Math.cos(angle) * eyeSize * 0.3;
+        const py = Math.sin(angle) * eyeSize * 0.3;
 
         ctx.fillStyle = "#000";
-        const pupilSize = eyeSize * 0.4;
+        const pupilSize = eyeSize * 0.5;
         ctx.fillRect(-eyeOffsetX - pupilSize/2 + px, eyeOffsetY - pupilSize/2 + py, pupilSize, pupilSize);
         ctx.fillRect(eyeOffsetX - pupilSize/2 + px, eyeOffsetY - pupilSize/2 + py, pupilSize, pupilSize);
 
         // === РОТ (открытый, страшный) ===
-        const mouthY = eyeOffsetY + eyeSize * 1.2;
+        const mouthY = eyeOffsetY + eyeSize * 1.3;
         ctx.fillStyle = "#000";
-        ctx.fillRect(-w * 0.2, mouthY, w * 0.4, h * 0.15);
+        ctx.fillRect(-headSize * 0.25, mouthY, headSize * 0.5, headSize * 0.18);
 
         // === ЗУБЫ (острые квадраты) ===
         ctx.fillStyle = "#ffffff";
-        const toothCount = 4;
-        const toothWidth = (w * 0.4) / toothCount;
+        const toothCount = 5;
+        const toothWidth = (headSize * 0.5) / toothCount;
         for (let i = 0; i < toothCount; i++) {
-            const toothX = -w * 0.2 + i * toothWidth;
-            ctx.fillRect(toothX, mouthY, toothWidth * 0.8, h * 0.1);
+            const toothX = -headSize * 0.25 + i * toothWidth;
+            ctx.fillRect(toothX, mouthY, toothWidth * 0.8, headSize * 0.12);
         }
 
-        // === РАНЫ НА ЛИЦЕ ===
+        // === РАНЫ НА ЛИЦЕ (страшные) ===
         if (z.hasWounds) {
             ctx.fillStyle = "#7a0000";
             // Ранa на щеке
-            ctx.fillRect(eyeOffsetX + eyeSize, eyeOffsetY, w * 0.1, h * 0.1);
-        }
-
-        // === КРОВЬ НА ОДЕЖДЕ ===
-        if (z.health < z.maxHealth) {
-            ctx.fillStyle = "#7a0000";
-            ctx.globalAlpha = 0.5;
-            ctx.fillRect(-w/2, -h/2, w, h * 0.3);
+            ctx.fillRect(eyeOffsetX + eyeSize * 0.5, eyeOffsetY, headSize * 0.15, headSize * 0.15);
+            // Ранa на лбу
+            ctx.fillRect(-headSize * 0.1, -headSize * 0.3, headSize * 0.2, headSize * 0.1);
+            // Кровь из ран
+            ctx.fillStyle = "#aa0000";
+            ctx.globalAlpha = 0.7;
+            ctx.fillRect(eyeOffsetX + eyeSize * 0.5, eyeOffsetY + headSize * 0.15, headSize * 0.1, headSize * 0.2);
             ctx.globalAlpha = 1.0;
         }
+
+        // === ШРАМЫ (темные линии) ===
+        ctx.strokeStyle = "#1a1a1a";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-headSize * 0.3, eyeOffsetY - eyeSize);
+        ctx.lineTo(-headSize * 0.1, eyeOffsetY + eyeSize);
+        ctx.stroke();
 
         ctx.restore();
     });

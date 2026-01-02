@@ -145,6 +145,16 @@ function updateBullets() {
 
         // Проверка попадания в зомби
         let hit = false;
+        let hitCount = 0; // Счетчик попаданий для прострела насквозь
+        // Проверяем улучшение прострела насквозь
+        let maxHits = 1;
+        if (typeof getUpgradeLevel === 'function') {
+            // Используем строку 'pierce' напрямую, так как UPGRADE_TYPES может быть недоступен
+            const pierceLevel = getUpgradeLevel('pierce');
+            if (pierceLevel > 0) {
+                maxHits = 2;
+            }
+        }
 
         for (let j = zombies.length - 1; j >= 0; j--) {
             let z = zombies[j];
@@ -154,9 +164,22 @@ function updateBullets() {
 
             if (dist < z.size / 2) {
                 // Попадание!
+                hitCount++;
 
                 // Наносим урон
                 z.health -= config.bullet.damage;
+
+                // Отталкивание зомби (если улучшение куплено)
+                if (typeof getUpgradeLevel === 'function') {
+                    // Используем строку 'pushBack' напрямую
+                    const pushLevel = getUpgradeLevel('pushBack');
+                    if (pushLevel > 0) {
+                        const pushPower = 5 * pushLevel; // Сила отталкивания
+                        const pushAngle = Math.atan2(z.y - b.y, z.x - b.x);
+                        z.x += Math.cos(pushAngle) * pushPower;
+                        z.y += Math.sin(pushAngle) * pushPower;
+                    }
+                }
 
                 // Создаем частицу крови при попадании
                 blood.push({
@@ -165,10 +188,6 @@ function updateBullets() {
                     size: Math.random() * 12 + 8,
                     alpha: 1
                 });
-
-                // Удаляем пулю
-                bullets.splice(i, 1);
-                hit = true;
 
                 // Проверка смерти зомби
                 if (z.health <= 0) {
@@ -184,6 +203,11 @@ function updateBullets() {
                     if (typeof spawnHeart === 'function' && Math.random() < 0.3) {
                         spawnHeart(z.x, z.y);
                     }
+                    
+                    // Спавн монетки с вероятностью 50%
+                    if (typeof spawnCoin === 'function' && Math.random() < 0.5) {
+                        spawnCoin(z.x, z.y);
+                    }
 
                     // Удаляем зомби
                     zombies.splice(j, 1);
@@ -196,7 +220,12 @@ function updateBullets() {
                     }
                 }
 
-                break;  // Выходим из цикла зомби
+                // Если достигнут лимит попаданий для прострела, удаляем пулю
+                if (hitCount >= maxHits) {
+                    bullets.splice(i, 1);
+                    hit = true;
+                    break;  // Выходим из цикла зомби
+                }
             }
         }
 
