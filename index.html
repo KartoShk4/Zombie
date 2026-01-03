@@ -46,13 +46,13 @@
         <h2 class="title">Настройки</h2>
         
         <div style="margin: 30px 0;">
-            <h3 style="font-size: 18px; color: #ff4444; margin-bottom: 20px;">Никнейм</h3>
+            <h3 class="settings-section-title">Никнейм</h3>
             <input type="text" id="settings-nickname-input" class="nickname-input" maxlength="20" placeholder="Ваш никнейм">
             <button class="menu-btn" onclick="saveSettingsNickname()" style="width: 200px; margin-top: 10px;">Сохранить</button>
         </div>
         
         <div style="margin: 30px 0;">
-            <h3 style="font-size: 18px; color: #ff4444; margin-bottom: 20px;">Уровень сложности</h3>
+            <h3 class="settings-section-title">Уровень сложности</h3>
             
             <button class="menu-btn difficulty-btn" data-difficulty="easy" onclick="selectDifficulty('easy')" style="width: 220px;">
                 <span id="difficulty-easy-check" style="opacity: 0;">✓ </span>Легкий
@@ -64,31 +64,74 @@
                 <span id="difficulty-hard-check" style="opacity: 0;">✓ </span>Сложный
             </button>
             
-            <p class="text" style="font-size: 12px; margin-top: 20px; color: #aaa;">
+            <p class="text settings-description">
                 Легкий: +50% HP, -30% скорость зомби, -40% урон<br>
                 Обычный: Стандартные значения<br>
                 Сложный: -30% HP, +50% скорость зомби, +80% урон
             </p>
         </div>
 
-        <!-- Звук -->
-        <div class="sounds-setting">
-            <h3 style="font-size: 18px; color: #ff4444; margin-bottom: 10px;">Звук</h3>
+        <!-- Кнопки для подменю -->
+        <div style="margin: 30px 0;">
+            <button class="menu-btn" onclick="openGraphicsSettings()" style="width: 220px; margin: 10px 0;">
+                🎨 Графика
+            </button>
+            <button class="menu-btn" onclick="openSoundSettings()" style="width: 220px; margin: 10px 0;">
+                🔊 Звук
+            </button>
+        </div>
 
-            <label class="text" style="font-size: 12px; color: #aaa;">Громкость эффектов</label>
-            <input id="effects-slider" type="range" min="0" max="100" class="settings-slider pixel-slider">
+        <button class="menu-btn" onclick="closeSettings()">Назад</button>
+    </div>
+</div>
 
-            <label class="text" style="font-size: 12px; color: #aaa;">Громкость музыки</label>
-            <input id="music-slider" type="range" min="0" max="100" class="settings-slider pixel-slider">
+<!-- Настройки графики -->
+<div id="graphics-settings-menu" class="menu hidden">
+    <div class="menu-content">
+        <h2 class="title">Настройки графики</h2>
+        
+        <div style="margin: 30px 0;">
+            <h3 class="settings-section-title">Качество графики</h3>
+            
+            <button class="menu-btn graphics-quality-btn" data-quality="low" onclick="selectGraphicsQuality('low')" style="width: 220px;">
+                <span id="graphics-low-check" style="opacity: 0;">✓ </span>Низкое
+            </button>
+            <button class="menu-btn graphics-quality-btn" data-quality="medium" onclick="selectGraphicsQuality('medium')" style="width: 220px;">
+                <span id="graphics-medium-check" style="opacity: 0;">✓ </span>Среднее
+            </button>
+            <button class="menu-btn graphics-quality-btn" data-quality="high" onclick="selectGraphicsQuality('high')" style="width: 220px;">
+                <span id="graphics-high-check" style="opacity: 0;">✓ </span>Высокое
+            </button>
+            
+            <p class="text settings-description">
+                Низкое: Максимальная производительность<br>
+                Среднее: Баланс качества и производительности<br>
+                Высокое: Максимальное качество графики
+            </p>
+        </div>
 
-            <button class="menu-btn" id="mute-btn" style="width: 220px; margin-top: 15px;">
+        <button class="menu-btn" onclick="closeGraphicsSettings()">Назад</button>
+    </div>
+</div>
+
+<!-- Настройки звука -->
+<div id="sound-settings-menu" class="menu hidden">
+    <div class="menu-content">
+        <h2 class="title">Настройки звука</h2>
+        
+        <div class="sounds-setting" style="margin: 30px 0;">
+            <label class="text" style="font-size: 12px; color: #aaa; display: block; margin-bottom: 10px;">Громкость эффектов</label>
+            <input id="effects-slider" type="range" min="0" max="100" class="settings-slider pixel-slider" style="width: 100%;">
+
+            <label class="text" style="font-size: 12px; color: #aaa; display: block; margin: 20px 0 10px 0;">Громкость музыки</label>
+            <input id="music-slider" type="range" min="0" max="100" class="settings-slider pixel-slider" style="width: 100%;">
+
+            <button class="menu-btn" id="mute-btn" style="width: 220px; margin-top: 20px;">
                 🔇 Выключить звук
             </button>
         </div>
 
-
-
-        <button class="menu-btn" onclick="closeSettings()">Назад</button>
+        <button class="menu-btn" onclick="closeSoundSettings()">Назад</button>
     </div>
 </div>
 
@@ -211,8 +254,20 @@
 <script src="js/core/upgrades.js" defer></script>
 <script src="js/core/save.js" defer></script>
 <script src="js/core/sound.js" defer></script>
-<script src="js/core/main.js" defer></script>
+<script src="js/core/graphics.js" defer></script>
 <script src="js/core/grid.js"></script>
+
+<!-- Основные модули игры (должны загружаться после config и других систем) -->
+<script src="js/core/game_state.js" defer></script>
+<script src="js/core/background.js" defer></script>
+<script src="js/core/effects.js" defer></script>
+<script src="js/core/camera.js" defer></script>
+<script src="js/core/menu.js" defer></script>
+<script src="js/core/shop.js" defer></script>
+<script src="js/core/revive.js" defer></script>
+<script src="js/core/pause.js" defer></script>
+<script src="js/core/game_loop.js" defer></script>
+<script src="js/core/main.js" defer></script>
 
 <!-- Управление -->
 <script src="js/controls/input.js" defer></script>

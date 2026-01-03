@@ -77,8 +77,16 @@ function renderHearts(ctx) {
         ctx.save();
         ctx.translate(h.x, h.y);
         
-        // Пульсация (легкое покачивание размера)
-        const pulseScale = 1 + Math.sin(h.pulse) * 0.1;
+        // Пульсация (легкое покачивание размера) - проверяем настройки графики
+        let pulseScale = 1;
+        if (typeof getGraphicsSettings === 'function') {
+            const settings = getGraphicsSettings();
+            if (settings.heartPulse) {
+                pulseScale = 1 + Math.sin(h.pulse) * 0.1;
+            }
+        } else {
+            pulseScale = 1 + Math.sin(h.pulse) * 0.1;
+        }
         ctx.scale(pulseScale, pulseScale);
         
         // Рисуем сердечко используя функцию из pixel_heart.js

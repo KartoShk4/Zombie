@@ -89,44 +89,96 @@ function renderHUD(ctx) {
     // === 9. АКТИВНЫЕ БАФФЫ (слева внизу, выше джойстика) ===
     if (typeof activeBuffs !== 'undefined' && typeof getBuffConfig === 'function') {
         const cssH = canvas.clientHeight || window.innerHeight;
-        let buffY = cssH - 100; // Выше джойстика
+        let buffY = cssH - (isMobile ? 120 : 100); // Выше джойстика (больше отступ на мобильных)
+        
+        // Разделяем положительные и негативные баффы
+        const positiveBuffs = [];
+        const negativeBuffs = [];
         
         for (let buffId in activeBuffs) {
             const buff = activeBuffs[buffId];
             if (buff.timeLeft > 0) {
                 const config = getBuffConfig(buffId);
                 if (config) {
-                    ctx.save();
-                    ctx.textAlign = "left";
-                    
-                    // Фон баффа
-                    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-                    ctx.fillRect(15, buffY - 12, 200, 20);
-                    
-                    // Рамка
-                    ctx.strokeStyle = config.color || "#ffd700";
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(15, buffY - 12, 200, 20);
-                    
-                    // Иконка
-                    ctx.fillStyle = config.color || "#ffd700";
-                    ctx.font = "12px 'Press Start 2P'";
-                    ctx.fillText(config.icon || "?", 20, buffY - 8);
-                    
-                    // Название
-                    ctx.font = "8px 'Press Start 2P'";
-                    ctx.fillText(config.name || buffId, 35, buffY - 8);
-                    
-                    // Таймер
-                    const timeLeft = Math.ceil(buff.timeLeft);
-                    ctx.fillStyle = "#aaa";
-                    ctx.font = "7px 'Press Start 2P'";
-                    ctx.fillText(timeLeft + "s", 210, buffY + 5);
-                    
-                    ctx.restore();
-                    buffY -= 25;
+                    if (config.isNegative) {
+                        negativeBuffs.push({ id: buffId, buff, config });
+                    } else {
+                        positiveBuffs.push({ id: buffId, buff, config });
+                    }
                 }
             }
+        }
+        
+        // Сначала показываем негативные баффы (красные)
+        for (let item of negativeBuffs) {
+            const { id: buffId, buff, config } = item;
+            ctx.save();
+            ctx.textAlign = "left";
+            
+            // Фон баффа (темнее для негативных)
+            ctx.fillStyle = "rgba(68, 0, 0, 0.8)";
+            const buffWidth = isMobile ? 180 : 200;
+            const buffHeight = isMobile ? 22 : 20;
+            ctx.fillRect(15, buffY - buffHeight/2, buffWidth, buffHeight);
+            
+            // Рамка (красная для негативных)
+            ctx.strokeStyle = "#ff4444";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(15, buffY - buffHeight/2, buffWidth, buffHeight);
+            
+            // Иконка
+            ctx.fillStyle = "#ff4444";
+            ctx.font = isMobile ? "14px 'Press Start 2P'" : "12px 'Press Start 2P'";
+            ctx.fillText(config.icon || "?", 20, buffY - (isMobile ? 6 : 8));
+            
+            // Название
+            ctx.font = isMobile ? "9px 'Press Start 2P'" : "8px 'Press Start 2P'";
+            ctx.fillText(config.name || buffId, 38, buffY - (isMobile ? 6 : 8));
+            
+            // Таймер
+            const timeLeft = Math.max(0, Math.floor(buff.timeLeft));
+            ctx.fillStyle = timeLeft <= 3 ? "#ff0000" : "#ff6666"; // Ярко-красный для негативных
+            ctx.font = isMobile ? "8px 'Press Start 2P'" : "7px 'Press Start 2P'";
+            ctx.fillText(timeLeft + "s", buffWidth - 5, buffY + (isMobile ? 7 : 5));
+            
+            ctx.restore();
+            buffY -= (isMobile ? 28 : 25);
+        }
+        
+        // Затем показываем положительные баффы
+        for (let item of positiveBuffs) {
+            const { id: buffId, buff, config } = item;
+            ctx.save();
+            ctx.textAlign = "left";
+            
+            // Фон баффа
+            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            const buffWidth = isMobile ? 180 : 200;
+            const buffHeight = isMobile ? 22 : 20;
+            ctx.fillRect(15, buffY - buffHeight/2, buffWidth, buffHeight);
+            
+            // Рамка
+            ctx.strokeStyle = config.color || "#ffd700";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(15, buffY - buffHeight/2, buffWidth, buffHeight);
+            
+            // Иконка
+            ctx.fillStyle = config.color || "#ffd700";
+            ctx.font = isMobile ? "14px 'Press Start 2P'" : "12px 'Press Start 2P'";
+            ctx.fillText(config.icon || "?", 20, buffY - (isMobile ? 6 : 8));
+            
+            // Название
+            ctx.font = isMobile ? "9px 'Press Start 2P'" : "8px 'Press Start 2P'";
+            ctx.fillText(config.name || buffId, 38, buffY - (isMobile ? 6 : 8));
+            
+            // Таймер (исправлено: используем Math.floor для правильного отображения)
+            const timeLeft = Math.max(0, Math.floor(buff.timeLeft));
+            ctx.fillStyle = timeLeft <= 3 ? "#ff4444" : "#aaa"; // Красный цвет если осталось <= 3 секунды
+            ctx.font = isMobile ? "8px 'Press Start 2P'" : "7px 'Press Start 2P'";
+            ctx.fillText(timeLeft + "s", buffWidth - 5, buffY + (isMobile ? 7 : 5));
+            
+            ctx.restore();
+            buffY -= (isMobile ? 28 : 25);
         }
     }
 

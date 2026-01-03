@@ -97,6 +97,17 @@ body {
     background: transparent;
     padding: 40px;
     margin: auto;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+    .menu-content {
+        padding: 20px;
+        max-width: 95%;
+    }
 }
 
 /* ===== ТИПОГРАФИКА ===== */
@@ -109,6 +120,15 @@ body {
     line-height: 125%;
     text-shadow: 4px 4px black;
     letter-spacing: 2px;
+}
+
+/* Адаптация заголовка для мобильных */
+@media (max-width: 768px) {
+    .title {
+        font-size: 20px;
+        margin-bottom: 25px;
+        letter-spacing: 1px;
+    }
 }
 
 /* ===== КНОПКИ ===== */
@@ -131,6 +151,18 @@ body {
     transition: transform 0.1s steps(2), background 0.1s;
 }
 
+/* Адаптация кнопок для мобильных */
+@media (max-width: 768px) {
+    .menu-btn {
+        width: 90%;
+        max-width: 280px;
+        padding: 12px;
+        margin: 8px auto;
+        font-size: 14px;
+        border-width: 3px;
+    }
+}
+
 /* Эффекты при наведении и нажатии */
 .menu-btn:hover { transform: scale(1.05); background: #444; }
 .menu-btn:active { transform: scale(0.95); background: #666; }
@@ -141,6 +173,15 @@ body {
     font-size: 14px;
     line-height: 1.8;
     margin: 20px 0;
+}
+
+/* Адаптация текста для мобильных */
+@media (max-width: 768px) {
+    .text {
+        font-size: 11px;
+        line-height: 1.6;
+        margin: 15px 0;
+    }
 }
 
 /* ===== УТИЛИТЫ ===== */
@@ -160,6 +201,18 @@ body {
     font-family: 'Press Start 2P', monospace;
     font-size: 14px;
     text-align: center;
+}
+
+/* Адаптация поля ввода для мобильных */
+@media (max-width: 768px) {
+    .nickname-input {
+        width: 85%;
+        max-width: 240px;
+        padding: 10px;
+        margin: 15px auto;
+        font-size: 12px;
+        border-width: 3px;
+    }
 }
 
 .nickname-input:focus {
@@ -183,6 +236,17 @@ body {
     outline: none;
     margin: 0 0 10px 0;
     image-rendering: pixelated;
+}
+
+/* Адаптация слайдера для мобильных */
+@media (max-width: 768px) {
+    .pixel-slider {
+        width: 90%;
+        max-width: 260px;
+        height: 10px;
+        border-width: 2px;
+        margin: 0 0 8px 0;
+    }
 }
 
 .pixel-slider::-webkit-slider-thumb {
@@ -273,5 +337,60 @@ body {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-10px); }
     to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== АДАПТАЦИЯ ДЛЯ МОБИЛЬНЫХ ===== */
+
+/* Заголовки секций настроек */
+.settings-section-title {
+    font-size: 18px;
+    color: #ff4444;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .settings-section-title {
+        font-size: 14px;
+        margin-bottom: 15px;
+    }
+}
+
+/* Описания в настройках */
+.settings-description {
+    font-size: 12px;
+    margin-top: 20px;
+    color: #aaa;
+}
+
+@media (max-width: 768px) {
+    .settings-description {
+        font-size: 10px;
+        margin-top: 15px;
+        line-height: 1.5;
+    }
+}
+
+/* Адаптация контента рейтинга и достижений */
+@media (max-width: 768px) {
+    .leaderboard-content,
+    .achievements-content {
+        max-height: 50vh;
+        padding: 8px;
+        font-size: 9px;
+    }
+    
+    .leaderboard-item {
+        padding: 6px;
+        font-size: 9px;
+    }
+    
+    .achievement-item {
+        padding: 8px;
+        font-size: 8px;
+    }
+    
+    .achievement-icon {
+        font-size: 20px;
+    }
 }
 

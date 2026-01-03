@@ -278,6 +278,22 @@ function updateZombies(dt = 1 / 60) {
 // ===== ОТРИСОВКА КРОВИ =====
 
 function renderBlood(ctx) {
+    // Проверяем настройки графики
+    if (typeof getGraphicsSettings === 'function') {
+        const settings = getGraphicsSettings();
+        if (!settings.blood) return; // Кровь отключена
+        
+        // Ограничиваем количество частиц крови
+        if (typeof limitBlood === 'function') {
+            limitBlood(blood, settings.maxBlood);
+        } else if (blood.length > settings.maxBlood) {
+            blood.splice(0, blood.length - settings.maxBlood);
+        }
+    }
+    
+    // Обновляем частицы только если нужно
+    const shouldUpdate = typeof shouldUpdateParticles === 'function' ? shouldUpdateParticles() : true;
+    
     for (let i = blood.length - 1; i >= 0; i--) {
         const b = blood[i];
 
@@ -289,11 +305,17 @@ function renderBlood(ctx) {
         ctx.fill();
         ctx.restore();
 
-        b.alpha -= 0.02;
-        if (b.alpha <= 0) blood.splice(i, 1);
+        // Обновляем альфа только если нужно обновлять частицы
+        if (shouldUpdate) {
+            b.alpha -= 0.02;
+            if (b.alpha <= 0) blood.splice(i, 1);
+        }
     }
 
-    if (blood.length > 400) blood.length = 400;
+    // Ограничение для обратной совместимости
+    if (typeof getGraphicsSettings !== 'function' && blood.length > 400) {
+        blood.length = 400;
+    }
 }
 
 // ===== ОТРИСОВКА ЗОМБИ =====

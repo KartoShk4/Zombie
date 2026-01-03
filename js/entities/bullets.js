@@ -22,12 +22,19 @@ let currentTargetIndex = 0; // Индекс текущей цели
 function tryShootBullet() {
     const now = performance.now() / 1000;
 
-    // Бафф скорости атаки
+    // Бафф скорости атаки (положительный)
     let currentFireRate = fireRate;
     if (typeof hasBuff === 'function' && typeof buffConfig !== 'undefined') {
         if (hasBuff('fireRate')) {
             const level = typeof getBuffLevel === 'function' ? getBuffLevel('fireRate') : 1;
             const buff = buffConfig['fireRate'];
+            if (buff && buff.effect) currentFireRate = fireRate * buff.effect(level);
+        }
+        
+        // Дебафф медленной атаки (негативный)
+        if (hasBuff('fireRateSlow')) {
+            const level = typeof getBuffLevel === 'function' ? getBuffLevel('fireRateSlow') : 1;
+            const buff = buffConfig['fireRateSlow'];
             if (buff && buff.effect) currentFireRate = fireRate * buff.effect(level);
         }
     }
@@ -256,9 +263,21 @@ function updateBullets(dt = 1 / 60) {
                     }
 
                     if (typeof spawnBuff === 'function' && Math.random() < 0.15) {
-                        const buffTypes = Object.values(BUFF_TYPES);
-                        const buffType = buffTypes[Math.floor(Math.random() * buffTypes.length)];
-                        spawnBuff(buffType, z.x, z.y);
+                        const buffTypesObj = typeof BUFF_TYPES !== 'undefined' ? BUFF_TYPES : window.BUFF_TYPES;
+                        const buffConfigObj = typeof buffConfig !== 'undefined' ? buffConfig : window.buffConfig;
+                        const buffTypes = Object.values(buffTypesObj);
+                        if (buffTypes && buffTypes.length > 0 && buffConfigObj) {
+                            // При смерти зомби спавнятся только положительные баффы
+                            const positiveTypes = buffTypes.filter(type => {
+                                const config = buffConfigObj[type];
+                                return config && !config.isNegative;
+                            });
+                            
+                            if (positiveTypes.length > 0) {
+                                const buffType = positiveTypes[Math.floor(Math.random() * positiveTypes.length)];
+                                spawnBuff(buffType, z.x, z.y);
+                            }
+                        }
                     }
 
                     zombies.splice(zombies.indexOf(z), 1);

@@ -40,10 +40,17 @@ function updatePlayer(dt = 1/60) {
     if (jx !== 0 || jy !== 0) {
         let currentSpeed = player.speed;
 
-        // Бафф скорости
+        // Бафф скорости (положительный)
         if (typeof hasBuff === 'function' && hasBuff('movementSpeed')) {
             const lvl = typeof getBuffLevel === 'function' ? getBuffLevel('movementSpeed') : 1;
-            const buff = buffConfig['movementSpeed'];
+            const buff = typeof buffConfig !== 'undefined' ? buffConfig['movementSpeed'] : null;
+            if (buff && buff.effect) currentSpeed *= buff.effect(lvl);
+        }
+        
+        // Дебафф замедления (негативный)
+        if (typeof hasBuff === 'function' && hasBuff('movementSlow')) {
+            const lvl = typeof getBuffLevel === 'function' ? getBuffLevel('movementSlow') : 1;
+            const buff = typeof buffConfig !== 'undefined' ? buffConfig['movementSlow'] : null;
             if (buff && buff.effect) currentSpeed *= buff.effect(lvl);
         }
 
@@ -132,28 +139,36 @@ function renderPlayer(ctx) {
     // Рот
     ctx.fillRect(-head * 0.25, ey + eye * 1.2, head * 0.5, head * 0.08);
 
-    // Вспышка
+    // Вспышка (проверяем настройки графики)
     if (muzzleFlash > 0 && typeof lastShotAngle !== 'undefined') {
-        const alpha = Math.min(1, muzzleFlash / 3);
-        ctx.globalAlpha = alpha;
+        let showFlash = true;
+        if (typeof getGraphicsSettings === 'function') {
+            const settings = getGraphicsSettings();
+            showFlash = settings.muzzleFlash;
+        }
+        
+        if (showFlash) {
+            const alpha = Math.min(1, muzzleFlash / 3);
+            ctx.globalAlpha = alpha;
 
-        const dist = head * 0.6;
-        const fx = Math.cos(lastShotAngle) * dist;
-        const fy = Math.sin(lastShotAngle) * dist;
-        const size = head * 0.4;
+            const dist = head * 0.6;
+            const fx = Math.cos(lastShotAngle) * dist;
+            const fy = Math.sin(lastShotAngle) * dist;
+            const size = head * 0.4;
 
-        ctx.save();
-        ctx.translate(fx, fy);
-        ctx.rotate(lastShotAngle);
+            ctx.save();
+            ctx.translate(fx, fy);
+            ctx.rotate(lastShotAngle);
 
-        ctx.fillStyle = "#ffd42a";
-        ctx.fillRect(0, -size/2, size * 1.5, size);
+            ctx.fillStyle = "#ffd42a";
+            ctx.fillRect(0, -size/2, size * 1.5, size);
 
-        ctx.fillStyle = "#ffaa00";
-        ctx.fillRect(size * 0.3, -size/3, size, size * 0.6);
+            ctx.fillStyle = "#ffaa00";
+            ctx.fillRect(size * 0.3, -size/3, size, size * 0.6);
 
-        ctx.restore();
-        ctx.globalAlpha = 1;
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        }
     }
 
     ctx.restore();

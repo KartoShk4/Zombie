@@ -85,8 +85,16 @@ function renderCoins(ctx) {
         ctx.save();
         ctx.translate(c.x, c.y);
         
-        // Пульсация (легкое покачивание размера)
-        const pulseScale = 1 + Math.sin(c.pulse) * 0.15;
+        // Пульсация (легкое покачивание размера) - проверяем настройки графики
+        let pulseScale = 1;
+        if (typeof getGraphicsSettings === 'function') {
+            const settings = getGraphicsSettings();
+            if (settings.coinPulse) {
+                pulseScale = 1 + Math.sin(c.pulse) * 0.15;
+            }
+        } else {
+            pulseScale = 1 + Math.sin(c.pulse) * 0.15;
+        }
         ctx.scale(pulseScale, pulseScale);
         
         // Вращение монетки
