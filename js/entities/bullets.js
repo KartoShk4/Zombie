@@ -10,264 +10,213 @@ let bullets = [];           // Массив всех пуль
 let score = 0;              // Счет игрока
 let zombiesKilled = 0;      // Количество убитых зомби
 
-// Примечание: muzzleFlash объявлена в main.js
+// muzzleFlash объявлена в main.js
 
 // ===== СИСТЕМА СТРЕЛЬБЫ =====
-let fireRate = 2;           // Количество выстрелов в секунду (уменьшено)
-let lastShotTime = 0;        // Время последнего выстрела
-let currentTargetIndex = 0;  // Индекс текущей цели в отсортированном массиве зомби
+let fireRate = 2;           // Количество выстрелов в секунду
+let lastShotTime = 0;       // Время последнего выстрела
+let currentTargetIndex = 0; // Индекс текущей цели
 
 // ===== СОЗДАНИЕ ПУЛЬ =====
 
-/**
- * Попытка выстрела с ограничением по темпу стрельбы
- * Автоматически нацеливается на зомби по очереди (от ближайшего к дальнему)
- */
 function tryShootBullet() {
     const now = performance.now() / 1000;
-    
-    // Применяем бафф скорости атаки
+
+    // Бафф скорости атаки
     let currentFireRate = fireRate;
     if (typeof hasBuff === 'function' && typeof buffConfig !== 'undefined') {
         if (hasBuff('fireRate')) {
             const level = typeof getBuffLevel === 'function' ? getBuffLevel('fireRate') : 1;
             const buff = buffConfig['fireRate'];
-            if (buff && buff.effect) {
-                currentFireRate = fireRate * buff.effect(level);
-            }
+            if (buff && buff.effect) currentFireRate = fireRate * buff.effect(level);
         }
     }
-    
-    // Применяем постоянное улучшение скорости атаки
+
+    // Постоянное улучшение скорости атаки
     if (typeof getUpgradeLevel === 'function') {
         const fireRateLevel = getUpgradeLevel('permanentFireRate');
         if (fireRateLevel > 0) {
-            const upgrade = typeof getAllUpgrades === 'function' ? getAllUpgrades().find(u => u.id === 'permanentFireRate') : null;
-            if (upgrade && upgrade.effect) {
-                currentFireRate = fireRate * upgrade.effect(fireRateLevel);
-            }
+            const upgrade = typeof getAllUpgrades === 'function'
+                ? getAllUpgrades().find(u => u.id === 'permanentFireRate')
+                : null;
+            if (upgrade && upgrade.effect) currentFireRate = fireRate * upgrade.effect(fireRateLevel);
         }
     }
-    
-    const timeSinceLastShot = now - lastShotTime;
 
-    // Проверка кулдауна стрельбы
-    if (timeSinceLastShot < 1 / currentFireRate) {
-        return;  // Слишком рано для следующего выстрела
-    }
+    if (now - lastShotTime < 1 / currentFireRate) return;
+    if (!zombies || zombies.length === 0) return;
 
-    // Если зомби нет - не стреляем
-    if (zombies.length === 0) {
-        return;
-    }
-
-    // Фильтруем зомби по дальности стрельбы (только те, что в пределах видимости)
     const maxRange = config.bullet.maxRange;
+    const maxRangeSq = maxRange * maxRange;
+
+    // Фильтрация по дальности
     const zombiesInRange = zombies.filter(z => {
-        const dist = Math.hypot(player.x - z.x, player.y - z.y);
-        return dist <= maxRange;
+        const dx = player.x - z.x;
+        const dy = player.y - z.y;
+        return dx * dx + dy * dy <= maxRangeSq;
     });
 
-    // Если нет зомби в пределах дальности - не стреляем
-    if (zombiesInRange.length === 0) {
-        return;
-    }
+    if (zombiesInRange.length === 0) return;
 
-    // Сортируем зомби по расстоянию от игрока (от ближайшего к дальнему)
+    // Сортировка по расстоянию
     const sortedZombies = zombiesInRange.sort((a, b) => {
-        const distA = Math.hypot(player.x - a.x, player.y - a.y);
-        const distB = Math.hypot(player.x - b.x, player.y - b.y);
-        return distA - distB;
+        const dxA = player.x - a.x;
+        const dyA = player.y - a.y;
+        const dxB = player.x - b.x;
+        const dyB = player.y - b.y;
+        return (dxA * dxA + dyA * dyA) - (dxB * dxB + dyB * dyB);
     });
 
-    // Выбираем цель по текущему индексу (по очереди от ближайшего к дальнему)
-    if (currentTargetIndex >= sortedZombies.length) {
-        currentTargetIndex = 0;  // Если индекс вышел за границы, начинаем с начала
-    }
+    if (currentTargetIndex >= sortedZombies.length) currentTargetIndex = 0;
 
     const target = sortedZombies[currentTargetIndex];
-    
-    // Вычисляем направление к цели
     const dx = target.x - player.x;
     const dy = target.y - player.y;
-    const dist = Math.hypot(dx, dy);
+    const distSq = dx * dx + dy * dy;
+    if (distSq <= 0.0001) return;
 
-    if (dist > 0.01) {  // Если цель существует
-        // Переходим к следующей цели для следующего выстрела
-        currentTargetIndex++;
-        if (currentTargetIndex >= sortedZombies.length) {
-            currentTargetIndex = 0;  // Начинаем цикл заново
-        }
+    const dist = Math.sqrt(distSq);
 
-        lastShotTime = now;
-        
-        // Проверяем баффы для множественных пуль
-        if (typeof hasBuff === 'function' && typeof buffConfig !== 'undefined') {
-            // Тройной выстрел (3 пули в разные стороны)
-            if (hasBuff('tripleShot')) {
-                const dirX = dx / dist;
-                const dirY = dy / dist;
+    currentTargetIndex++;
+    if (currentTargetIndex >= sortedZombies.length) currentTargetIndex = 0;
 
-                shootBullet(dirX, dirY);
-                setTimeout(() => shootBullet(dirX, dirY), 70);
-                setTimeout(() => shootBullet(dirX, dirY), 140);
-                return;
-            }
+    lastShotTime = now;
 
-            // Множественные пули (2, 4, 6)
-            if (hasBuff('multiShot2') || hasBuff('multiShot4') || hasBuff('multiShot6')) {
-                let count = 2;
-                if (hasBuff('multiShot4')) count = 4;
-                else if (hasBuff('multiShot6')) count = 6;
+    const dirX = dx / dist;
+    const dirY = dy / dist;
 
-                const dirX = dx / dist;
-                const dirY = dy / dist;
-                const delay = 60;
-
-                for (let i = 0; i < count; i++) {
-                    setTimeout(() => shootBullet(dirX, dirY), i * delay);
-                }
-                return;
-            }
-
-            // Обычный выстрел
-            else {
-                shootBullet(dx / dist, dy / dist);
-            }
-        } else {
-            shootBullet(dx / dist, dy / dist);
-        }
+    // Тройной выстрел
+    if (typeof hasBuff === 'function' && hasBuff('tripleShot')) {
+        shootBullet(dirX, dirY);
+        setTimeout(() => shootBullet(dirX, dirY), 70);
+        setTimeout(() => shootBullet(dirX, dirY), 140);
+        return;
     }
+
+    // Множественные пули
+    if (typeof hasBuff === 'function' &&
+        (hasBuff('multiShot2') || hasBuff('multiShot4') || hasBuff('multiShot6'))) {
+
+        let count = 2;
+        if (hasBuff('multiShot4')) count = 4;
+        else if (hasBuff('multiShot6')) count = 6;
+
+        const delay = 60;
+        for (let i = 0; i < count; i++) {
+            setTimeout(() => shootBullet(dirX, dirY), i * delay);
+        }
+        return;
+    }
+
+    // Обычный выстрел
+    shootBullet(dirX, dirY);
 }
 
 /**
  * Создание пули
- * @param {number} dx - Направление X
- * @param {number} dy - Направление Y
  */
 function shootBullet(dx, dy) {
-    const dist = Math.hypot(dx, dy);
-    if (dist === 0) return;  // Нет направления
+    const distSq = dx * dx + dy * dy;
+    if (distSq === 0) return;
 
-    // Сохраняем угол выстрела для вспышки и пистолета
+    const dist = Math.sqrt(distSq);
+
     lastShotAngle = Math.atan2(dy, dx);
 
-    // Позиция дула пистолета (рассчитывается как в renderPlayer)
     const w = player.width;
     const h = player.height;
     const armWidth = w * 0.2;
-    const gunX = w/2 - armWidth * 0.2; // Позиция относительно центра игрока (как в renderPlayer)
+    const gunX = w / 2 - armWidth * 0.2;
     const gunY = -h * 0.1;
-    const barrelLength = 12; // Длина ствола
-    
-    // Мировые координаты дула
-    const gunWorldX = player.x + Math.cos(lastShotAngle) * gunX - Math.sin(lastShotAngle) * gunY;
-    const gunWorldY = player.y + Math.sin(lastShotAngle) * gunX + Math.cos(lastShotAngle) * gunY;
-    
-    // Позиция спавна пули (на конце ствола)
-    const spawnX = gunWorldX + Math.cos(lastShotAngle) * barrelLength;
-    const spawnY = gunWorldY + Math.sin(lastShotAngle) * barrelLength;
+    const barrelLength = 12;
 
-    // Создаем пулю
+    const cosA = Math.cos(lastShotAngle);
+    const sinA = Math.sin(lastShotAngle);
+
+    const gunWorldX = player.x + cosA * gunX - sinA * gunY;
+    const gunWorldY = player.y + sinA * gunX + cosA * gunY;
+
+    const spawnX = gunWorldX + cosA * barrelLength;
+    const spawnY = gunWorldY + sinA * barrelLength;
+
     const bullet = {
         x: spawnX,
         y: spawnY,
         radius: config.bullet.radius,
         speed: config.bullet.speed,
-        dx: dx / dist,  // Нормализованное направление X
-        dy: dy / dist,  // Нормализованное направление Y
-        bounces: 0,     // Количество рикошетов
-        maxBounces: 0   // Максимальное количество рикошетов
+        dx: dx / dist,
+        dy: dy / dist,
+        bounces: 0,
+        maxBounces: 0
     };
-    
-    // Проверяем постоянное улучшение рикошета
+
+    // Постоянный рикошет
     if (typeof getUpgradeLevel === 'function') {
         const ricochetLevel = getUpgradeLevel('permanentRicochet');
         if (ricochetLevel > 0) {
-            const upgrade = typeof getAllUpgrades === 'function' ? getAllUpgrades().find(u => u.id === 'permanentRicochet') : null;
-            if (upgrade && upgrade.effect) {
-                bullet.maxBounces = upgrade.effect(ricochetLevel);
-            }
+            const upgrade = typeof getAllUpgrades === 'function'
+                ? getAllUpgrades().find(u => u.id === 'permanentRicochet')
+                : null;
+            if (upgrade && upgrade.effect) bullet.maxBounces = upgrade.effect(ricochetLevel);
         }
     }
-    
-    // Проверяем временный бафф рикошета (имеет приоритет)
+
+    // Временный бафф рикошета
     if (typeof hasBuff === 'function' && hasBuff('ricochet')) {
         const buff = typeof buffConfig !== 'undefined' ? buffConfig['ricochet'] : null;
-        if (buff) {
-            bullet.maxBounces = buff.maxBounces || 3;
-        }
+        if (buff) bullet.maxBounces = buff.maxBounces || 3;
     }
-    
+
     bullets.push(bullet);
 
-    // Активируем вспышку
     muzzleFlash = 3;
-
-    // Звук выстрела
     playSound("shoot");
 }
 
 // ===== ОБНОВЛЕНИЕ ПУЛЬ =====
 
-/**
- * Обновление всех пуль каждый кадр
- * Обрабатывает движение и столкновения
- */
-function updateBullets(dt = 1/60) {
-    // Проходим по всем пулям (в обратном порядке для безопасного удаления)
+function updateBullets(dt = 1 / 60) {
+    const dtNorm = dt * 60;
+
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
 
-        // Движение пули
-        b.x += b.dx * b.speed * dt * 60; // Нормализуем к 60 FPS
-        b.y += b.dy * b.speed * dt * 60;
+        // Движение
+        b.x += b.dx * b.speed * dtNorm;
+        b.y += b.dy * b.speed * dtNorm;
 
-        // Если пуля вышла за границы мира — удалить
+        // Удаление за границами
         if (b.x < 0 || b.x > WORLD_WIDTH || b.y < 0 || b.y > WORLD_HEIGHT) {
             bullets.splice(i, 1);
             continue;
         }
 
-        // Проверка попадания в зомби
         let hit = false;
-        let hitCount = 0; // Счетчик попаданий для прострела насквозь
-        // Проверяем улучшение прострела насквозь
+        let hitCount = 0;
         let maxHits = 1;
+
         if (typeof getUpgradeLevel === 'function') {
-            // Используем строку 'pierce' напрямую, так как UPGRADE_TYPES может быть недоступен
             const pierceLevel = getUpgradeLevel('pierce');
-            if (pierceLevel > 0) {
-                maxHits = 2;
-            }
+            if (pierceLevel > 0) maxHits = 2;
         }
 
-        for (let j = zombies.length - 1; j >= 0; j--) {
-            let z = zombies[j];
+        // ⚡ ПОЛУЧАЕМ ТОЛЬКО БЛИЖАЙШИХ ЗОМБИ
+        const neighbors = gridGetNeighbors(b.x, b.y);
 
-            // Круглый хитбокс
-            const dist = Math.hypot(b.x - z.x, b.y - z.y);
+        for (let z of neighbors) {
+            const dx = b.x - z.x;
+            const dy = b.y - z.y;
+            const distSq = dx * dx + dy * dy;
+            const hitRadius = z.size / 2;
+            const hitRadiusSq = hitRadius * hitRadius;
 
-            if (dist < z.size / 2) {
-                // Попадание!
+            if (distSq < hitRadiusSq) {
                 hitCount++;
 
-                // Наносим урон
                 z.health -= config.bullet.damage;
 
-                // Отталкивание зомби (если улучшение куплено)
-                if (typeof getUpgradeLevel === 'function') {
-                    // Используем строку 'pushBack' напрямую
-                    const pushLevel = getUpgradeLevel('pushBack');
-                    if (pushLevel > 0) {
-                        const pushPower = 5 * pushLevel; // Сила отталкивания
-                        const pushAngle = Math.atan2(z.y - b.y, z.x - b.x);
-                        z.x += Math.cos(pushAngle) * pushPower;
-                        z.y += Math.sin(pushAngle) * pushPower;
-                    }
-                }
-
-                // Создаем частицу крови при попадании
+                // Кровь
+                if (blood.length > 300) blood.shift();
                 blood.push({
                     x: z.x,
                     y: z.y,
@@ -275,9 +224,20 @@ function updateBullets(dt = 1/60) {
                     alpha: 1
                 });
 
-                // Проверка смерти зомби
+                // Отталкивание
+                if (typeof getUpgradeLevel === 'function') {
+                    const pushLevel = getUpgradeLevel('pushBack');
+                    if (pushLevel > 0) {
+                        const dist = Math.sqrt(distSq) || 1;
+                        const pushPower = 5 * pushLevel;
+                        z.x += (dx / dist) * pushPower;
+                        z.y += (dy / dist) * pushPower;
+                    }
+                }
+
+                // Смерть зомби
                 if (z.health <= 0) {
-                    // Большая лужа крови при смерти
+                    if (blood.length > 300) blood.shift();
                     blood.push({
                         x: z.x,
                         y: z.y,
@@ -285,118 +245,79 @@ function updateBullets(dt = 1/60) {
                         alpha: 1
                     });
 
-                    // Спавн сердечка с вероятностью 30%
-                    if (typeof spawnHeart === 'function' && Math.random() < 0.3) {
+                    if (typeof spawnHeart === 'function' && Math.random() < 0.3)
                         spawnHeart(z.x, z.y);
-                    }
-                    
-                    // Спавн монетки с вероятностью 50%
-                    // Более сложные зомби дают больше монет (2-5)
+
                     if (typeof spawnCoin === 'function' && Math.random() < 0.5) {
-                        let coinValue = 1; // По умолчанию 1 монета
-                        
-                        // Определяем стоимость монетки в зависимости от типа зомби
-                        if (z.name === 'tank' || z.name === 'brute') {
-                            // Элитные зомби дают 3-5 монет
-                            coinValue = 3 + Math.floor(Math.random() * 3); // 3, 4 или 5
-                        } else if (z.name === 'spitter' || z.name === 'crawler') {
-                            // Продвинутые зомби дают 2-3 монеты
-                            coinValue = 2 + Math.floor(Math.random() * 2); // 2 или 3
-                        } else {
-                            // Обычные зомби дают 1 монету
-                            coinValue = 1;
-                        }
-                        
+                        let coinValue = 1;
+                        if (z.name === 'tank' || z.name === 'brute') coinValue = 3 + Math.floor(Math.random() * 3);
+                        else if (z.name === 'spitter' || z.name === 'crawler') coinValue = 2 + Math.floor(Math.random() * 2);
                         spawnCoin(z.x, z.y, coinValue);
                     }
-                    
-                    // Спавн баффа с вероятностью 15%
-                    if (typeof spawnBuff === 'function') {
-                        // Проверяем доступность BUFF_TYPES через window или глобально
-                        const buffTypesAvailable = typeof BUFF_TYPES !== 'undefined' || (typeof window !== 'undefined' && window.BUFF_TYPES);
-                        if (buffTypesAvailable && Math.random() < 0.15) {
-                            const buffTypesObj = typeof BUFF_TYPES !== 'undefined' ? BUFF_TYPES : window.BUFF_TYPES;
-                            const buffTypes = Object.values(buffTypesObj); // Используем значения, а не ключи
-                            if (buffTypes && buffTypes.length > 0) {
-                                const buffType = buffTypes[Math.floor(Math.random() * buffTypes.length)];
-                                spawnBuff(buffType, z.x, z.y);
-                                console.log('Бафф заспавнен:', buffType, 'в позиции', z.x, z.y);
-                            }
-                        }
+
+                    if (typeof spawnBuff === 'function' && Math.random() < 0.15) {
+                        const buffTypes = Object.values(BUFF_TYPES);
+                        const buffType = buffTypes[Math.floor(Math.random() * buffTypes.length)];
+                        spawnBuff(buffType, z.x, z.y);
                     }
 
-                    // Удаляем зомби
-                    zombies.splice(j, 1);
+                    zombies.splice(zombies.indexOf(z), 1);
                     score++;
                     zombiesKilled++;
-                    
-                    // Обновляем счетчик зомби в волне
-                    if (typeof zombiesInWave !== 'undefined' && zombiesInWave > 0) {
-                        zombiesInWave--;
-                    }
 
-                    // Если все зомби убиты, запускаем перерыв между волнами
-                    if (zombies.length === 0) {
-                        startWaveCooldown();
-                    }
+                    if (typeof zombiesInWave !== 'undefined' && zombiesInWave > 0)
+                        zombiesInWave--;
+
+                    if (zombies.length === 0) startWaveCooldown();
                 }
 
-                // Проверка рикошета
+                // Рикошет
                 if (b.maxBounces > 0 && b.bounces < b.maxBounces && zombies.length > 1) {
-                    // Ищем следующего зомби для рикошета
                     let nearestZombie = null;
-                    let nearestDist = Infinity;
-                    
-                    for (let k = 0; k < zombies.length; k++) {
-                        if (k === j) continue; // Пропускаем текущего зомби
-                        const otherZ = zombies[k];
-                        const otherDist = Math.hypot(b.x - otherZ.x, b.y - otherZ.y);
-                        if (otherDist < nearestDist && otherDist < config.bullet.maxRange * 0.5) {
-                            nearestDist = otherDist;
-                            nearestZombie = otherZ;
+                    let nearestDistSq = Infinity;
+
+                    for (let other of neighbors) {
+                        if (other === z) continue;
+                        const dx2 = b.x - other.x;
+                        const dy2 = b.y - other.y;
+                        const d2 = dx2 * dx2 + dy2 * dy2;
+                        if (d2 < nearestDistSq) {
+                            nearestDistSq = d2;
+                            nearestZombie = other;
                         }
                     }
-                    
+
                     if (nearestZombie) {
-                        // Рикошет к следующему зомби
-                        const ricochetDx = nearestZombie.x - b.x;
-                        const ricochetDy = nearestZombie.y - b.y;
-                        const ricochetDist = Math.hypot(ricochetDx, ricochetDy);
-                        if (ricochetDist > 0) {
-                            b.dx = ricochetDx / ricochetDist;
-                            b.dy = ricochetDy / ricochetDist;
+                        const rdx = nearestZombie.x - b.x;
+                        const rdy = nearestZombie.y - b.y;
+                        const rDistSq = rdx * rdx + rdy * rdy;
+                        if (rDistSq > 0) {
+                            const rDist = Math.sqrt(rDistSq);
+                            b.dx = rdx / rDist;
+                            b.dy = rdy / rDist;
                             b.bounces++;
-                            // Не удаляем пулю, продолжаем движение
                             continue;
                         }
                     }
                 }
-                
-                // Если достигнут лимит попаданий для прострела, удаляем пулю
+
                 if (hitCount >= maxHits) {
                     bullets.splice(i, 1);
                     hit = true;
-                    break;  // Выходим из цикла зомби
+                    break;
                 }
             }
         }
 
-        if (hit) continue;  // Пропускаем дальнейшую обработку этой пули
+        if (hit) continue;
     }
 }
 
 // ===== ОТРИСОВКА ПУЛЬ =====
 
-/**
- * Отрисовка всех пуль на canvas
- * @param {CanvasRenderingContext2D} ctx - Контекст canvas
- */
 function renderBullets(ctx) {
     ctx.fillStyle = 'yellow';
     for (let b of bullets) {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(b.x - 1, b.y - 1, 2, 2);
     }
 }
-
