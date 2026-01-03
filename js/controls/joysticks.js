@@ -1,155 +1,116 @@
 /* ============================================
-   УПРАВЛЕНИЕ ДЖОЙСТИКАМИ (TOUCH)
-   ============================================
-   Обработка сенсорного управления для
-   мобильных устройств: один джойстик
-   по центру снизу (движение и стрельба).
+   ДЖОЙСТИК — ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
    ============================================ */
 
-// ===== БАЗОВЫЕ ОБЪЕКТЫ ДЖОЙСТИКОВ =====
-
-// Единый джойстик — движение и стрельба
-// Координаты в CSS-пикселях (будут инициализированы при загрузке)
 let joystick = {
-    baseX: 0,       // Базовая позиция X (центр экрана) - в CSS-пикселях
-    baseY: 0,       // Базовая позиция Y (снизу) - в CSS-пикселях
-    stickX: 0,      // Текущая позиция стика X - в CSS-пикселях
-    stickY: 0,      // Текущая позиция стика Y - в CSS-пикселях
-    radius: 60,     // Радиус джойстика в CSS-пикселях
-    vector: { x: 0, y: 0 }  // Нормализованный вектор направления
+    baseX: 0,
+    baseY: 0,
+    stickX: 0,
+    stickY: 0,
+    radius: 60,
+    vector: { x: 0, y: 0 }
 };
 
-// ===== ОТСЛЕЖИВАНИЕ КАСАНИЙ =====
-// ID активного касания джойстика
-let touchId = null;   // ID касания джойстика
+let touchId = null;
 
-// ===== ОБРАБОТКА СОБЫТИЙ КАСАНИЯ =====
+// Кэшируем rect, чтобы не вызывать каждый раз
+let canvasRect = null;
+function updateCanvasRect() {
+    canvasRect = canvas.getBoundingClientRect();
+}
+updateCanvasRect();
+window.addEventListener("resize", updateCanvasRect);
 
-/**
- * Обработчик начала касания
- * @param {TouchEvent} e - Событие касания
- */
+// ===== TOUCH START =====
 function handleTouchStart(e) {
-    const rect = canvas.getBoundingClientRect();
+    if (touchId !== null) return;
+
+    const rect = canvasRect;
     for (let t of e.changedTouches) {
-        // ЕДИНЫЙ ДЖОЙСТИК (любое касание, если джойстик свободен)
-        if (touchId === null) {
-            touchId = t.identifier;
-            // Преобразуем координаты касания в CSS-пиксели относительно canvas
-            const x = t.clientX - rect.left;
-            const y = t.clientY - rect.top;
-            
-            // Плавающий джойстик - устанавливаем базовую позицию в место касания
-            joystick.baseX = x;
-            joystick.baseY = y;
-            joystick.stickX = x;
-            joystick.stickY = y;
-            
-            moveJoystick(joystick, x, y);
-        }
+        touchId = t.identifier;
+
+        const x = t.clientX - rect.left;
+        const y = t.clientY - rect.top;
+
+        joystick.baseX = x;
+        joystick.baseY = y;
+        joystick.stickX = x;
+        joystick.stickY = y;
+
+        moveJoystick(x, y);
+        break;
     }
 }
 
-/**
- * Обработчик движения касания
- * @param {TouchEvent} e - Событие касания
- */
+// ===== TOUCH MOVE =====
 function handleTouchMove(e) {
-    const rect = canvas.getBoundingClientRect();
+    if (touchId === null) return;
+
+    const rect = canvasRect;
     for (let t of e.changedTouches) {
-        // Обновляем джойстик
         if (t.identifier === touchId) {
-            // Преобразуем координаты касания в CSS-пиксели относительно canvas
-            const x = t.clientX - rect.left;
-            const y = t.clientY - rect.top;
-            moveJoystick(joystick, x, y);
+            moveJoystick(
+                t.clientX - rect.left,
+                t.clientY - rect.top
+            );
+            break;
         }
     }
 }
 
-/**
- * Обработчик окончания касания
- * @param {TouchEvent} e - Событие касания
- */
+// ===== TOUCH END =====
 function handleTouchEnd(e) {
     for (let t of e.changedTouches) {
-        // Сбрасываем джойстик
         if (t.identifier === touchId) {
-            resetJoystick(joystick);
+            resetJoystick();
             touchId = null;
+            break;
         }
     }
 }
 
-// ===== УПРАВЛЕНИЕ ДЖОЙСТИКАМИ =====
+// ===== ЛОГИКА ДЖОЙСТИКА =====
+function moveJoystick(x, y) {
+    const dx = x - joystick.baseX;
+    const dy = y - joystick.baseY;
+    const distSq = dx * dx + dy * dy;
+    const r = joystick.radius;
 
-/**
- * Перемещение стика джойстика
- * @param {Object} js - Объект джойстика
- * @param {number} x - Позиция X касания
- * @param {number} y - Позиция Y касания
- */
-function moveJoystick(js, x, y) {
-    const dx = x - js.baseX;
-    const dy = y - js.baseY;
-    const dist = Math.hypot(dx, dy);
-
-    // Если касание вышло за радиус, ограничиваем позицию
-    if (dist > js.radius) {
-        js.stickX = js.baseX + (dx / dist) * js.radius;
-        js.stickY = js.baseY + (dy / dist) * js.radius;
+    if (distSq > r * r) {
+        const dist = Math.sqrt(distSq);
+        joystick.stickX = joystick.baseX + (dx / dist) * r;
+        joystick.stickY = joystick.baseY + (dy / dist) * r;
     } else {
-        // Иначе следуем за касанием
-        js.stickX = x;
-        js.stickY = y;
+        joystick.stickX = x;
+        joystick.stickY = y;
     }
 
-    // Вычисляем нормализованный вектор направления
-    js.vector.x = (js.stickX - js.baseX) / js.radius;
-    js.vector.y = (js.stickY - js.baseY) / js.radius;
+    joystick.vector.x = (joystick.stickX - joystick.baseX) / r;
+    joystick.vector.y = (joystick.stickY - joystick.baseY) / r;
 }
 
-/**
- * Сброс джойстика в исходное положение
- * @param {Object} js - Объект джойстика
- */
-function resetJoystick(js) {
-    js.stickX = js.baseX;
-    js.stickY = js.baseY;
-    js.vector.x = 0;
-    js.vector.y = 0;
+function resetJoystick() {
+    joystick.stickX = joystick.baseX;
+    joystick.stickY = joystick.baseY;
+    joystick.vector.x = 0;
+    joystick.vector.y = 0;
 }
 
-// ===== ПОДКЛЮЧЕНИЕ СОБЫТИЙ =====
-// Подключаем обработчики событий к canvas
+// ===== ПОДКЛЮЧЕНИЕ =====
 canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
 canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
 canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+canvas.addEventListener("touchcancel", handleTouchEnd, { passive: false });
 
-
-// Отключаем зум двумя пальцами при управлении джойстиками
-canvas.addEventListener("touchstart", (e) => {
-    if (e.touches.length > 1) {
-        e.preventDefault(); // Предотвращаем зум
-    }
+// Блокируем зум
+canvas.addEventListener("touchstart", e => {
+    if (e.touches.length > 1) e.preventDefault();
 }, { passive: false });
 
-canvas.addEventListener("touchmove", (e) => {
-    if (e.touches.length > 1) {
-        e.preventDefault(); // Предотвращаем зум
-    }
+canvas.addEventListener("touchmove", e => {
+    if (e.touches.length > 1) e.preventDefault();
 }, { passive: false });
 
-canvas.addEventListener("gesturestart", (e) => {
-    e.preventDefault(); // Предотвращаем жесты (зум)
-}, { passive: false });
-
-canvas.addEventListener("gesturechange", (e) => {
-    e.preventDefault(); // Предотвращаем жесты (зум)
-}, { passive: false });
-
-canvas.addEventListener("gestureend", (e) => {
-    e.preventDefault(); // Предотвращаем жесты (зум)
-}, { passive: false });
-canvas.addEventListener("touchcancel", handleTouchEnd);
-
+canvas.addEventListener("gesturestart", e => e.preventDefault(), { passive: false });
+canvas.addEventListener("gesturechange", e => e.preventDefault(), { passive: false });
+canvas.addEventListener("gestureend", e => e.preventDefault(), { passive: false });

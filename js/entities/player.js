@@ -1,93 +1,71 @@
 /* ============================================
-   ИГРОК
-   ============================================
-   Управление игроком: движение, здоровье,
-   отрисовка и обработка урона.
+   ИГРОК — ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
    ============================================ */
 
 // ===== СОСТОЯНИЕ ИГРОКА =====
-// Объект игрока с начальными параметрами
 let player = {
-    width: config.player.width,        // Ширина игрока
-    height: config.player.height,     // Высота игрока
-    x: WORLD_WIDTH / 2,               // Позиция X (центр мира)
-    y: WORLD_HEIGHT / 2,              // Позиция Y (центр мира)
-    health: config.player.health,     // Текущее здоровье
-    maxHealth: config.player.health,  // Максимальное здоровье (с учетом сложности)
-    speed: config.player.speed        // Скорость движения
+    width: config.player.width,
+    height: config.player.height,
+    x: WORLD_WIDTH / 2,
+    y: WORLD_HEIGHT / 2,
+    health: config.player.health,
+    maxHealth: config.player.health,
+    speed: config.player.speed
 };
 
-// Кулдаун урона (защита от спама урона)
 let playerHitCooldown = 0;
 
-// ===== ОБРАБОТКА УРОНА =====
-
-/**
- * Нанесение урона игроку
- * @param {number} amount - Количество урона
- */
+// ===== УРОН =====
 function damagePlayer(amount) {
-    // Защита от спама урона - если кулдаун активен, урон не наносится
     if (playerHitCooldown > 0) return;
 
-    // Уменьшаем здоровье
     player.health -= amount;
     playerHitCooldown = config.zombie.hitCooldown;
 
-    // Проверка смерти
     if (player.health <= 0) {
         player.health = 0;
-        // Показываем предложение возродиться вместо немедленного gameOver
-        if (typeof showReviveModal === 'function') {
-            showReviveModal();
-        } else {
-            gameOver();  // Если функция недоступна, завершаем игру
-        }
+        if (typeof showReviveModal === 'function') showReviveModal();
+        else gameOver();
     }
-    
-    // Дрожание камеры при уроне
+
     cameraShake = cameraShakePower;
 }
 
 // ===== ОБНОВЛЕНИЕ ИГРОКА =====
-
-/**
- * Обновление состояния игрока каждый кадр
- * Обрабатывает движение и ограничения
- */
 function updatePlayer(dt = 1/60) {
-    // === 1. УПРАВЛЕНИЕ ДЖОЙСТИКОМ (МОБИЛЬНОЕ) ===
-    if (joystick.vector.x !== 0 || joystick.vector.y !== 0) {
-        // Применяем бафф скорости передвижения
+    const jx = joystick.vector.x;
+    const jy = joystick.vector.y;
+
+    // === 1. ДВИЖЕНИЕ ===
+    if (jx !== 0 || jy !== 0) {
         let currentSpeed = player.speed;
-        if (typeof hasBuff === 'function' && typeof buffConfig !== 'undefined') {
-            if (hasBuff('movementSpeed')) {
-                const level = typeof getBuffLevel === 'function' ? getBuffLevel('movementSpeed') : 1;
-                const buff = buffConfig['movementSpeed'];
-                if (buff && buff.effect) {
-                    currentSpeed = player.speed * buff.effect(level);
-                }
-            }
+
+        // Бафф скорости
+        if (typeof hasBuff === 'function' && hasBuff('movementSpeed')) {
+            const lvl = typeof getBuffLevel === 'function' ? getBuffLevel('movementSpeed') : 1;
+            const buff = buffConfig['movementSpeed'];
+            if (buff && buff.effect) currentSpeed *= buff.effect(lvl);
         }
-        
-        // Применяем постоянное улучшение скорости
+
+        // Постоянное улучшение
         if (typeof getUpgradeLevel === 'function') {
-            const speedLevel = getUpgradeLevel('permanentMovementSpeed');
-            if (speedLevel > 0) {
-                const upgrade = typeof getAllUpgrades === 'function' ? getAllUpgrades().find(u => u.id === 'permanentMovementSpeed') : null;
-                if (upgrade && upgrade.effect) {
-                    currentSpeed = player.speed * upgrade.effect(speedLevel);
-                }
+            const lvl = getUpgradeLevel('permanentMovementSpeed');
+            if (lvl > 0) {
+                const up = typeof getAllUpgrades === 'function'
+                    ? getAllUpgrades().find(u => u.id === 'permanentMovementSpeed')
+                    : null;
+                if (up && up.effect) currentSpeed *= up.effect(lvl);
             }
         }
-        
-        const newX = player.x + joystick.vector.x * currentSpeed * dt * 60; // Нормализуем к 60 FPS
-        const newY = player.y + joystick.vector.y * currentSpeed * dt * 60;
-        
-        // Проверяем коллизию с препятствиями (деревьями)
+
+        const move = currentSpeed * dt * 60;
+        const newX = player.x + jx * move;
+        const newY = player.y + jy * move;
+
+        // Проверка препятствий
         if (typeof checkObstacleCollision === 'function') {
-            const playerRadius = player.width / 2;
-            if (!checkObstacleCollision(newX, newY, playerRadius, false)) {
+            const r = player.width / 2;
+            if (!checkObstacleCollision(newX, newY, r, false)) {
                 player.x = newX;
                 player.y = newY;
             }
@@ -97,97 +75,86 @@ function updatePlayer(dt = 1/60) {
         }
     }
 
-    // === 2. ОГРАНИЧЕНИЯ ПО КРАЯМ МИРА ===
-    // Не даем игроку выйти за границы мира
-    if (player.x < player.width / 2) player.x = player.width / 2;
-    if (player.x > WORLD_WIDTH - player.width / 2) player.x = WORLD_WIDTH - player.width / 2;
+    // === 2. ГРАНИЦЫ МИРА ===
+    const halfW = player.width / 2;
+    const halfH = player.height / 2;
 
-    if (player.y < player.height / 2) player.y = player.height / 2;
-    if (player.y > WORLD_HEIGHT - player.height / 2) player.y = WORLD_HEIGHT - player.height / 2;
+    if (player.x < halfW) player.x = halfW;
+    else if (player.x > WORLD_WIDTH - halfW) player.x = WORLD_WIDTH - halfW;
 
-    // === 4. СОЗДАНИЕ СЛЕДОВ ===
-    // Создаем следы только при реальном движении
-    const moveX = joystick.vector.x;
-    const moveY = joystick.vector.y;
-    const isMoving = moveX !== 0 || moveY !== 0;
-    
-    if (isMoving && Math.random() < 0.12) {
-        // Вычисляем угол движения
-        const angle = Math.atan2(moveY, moveX);
-        const offsetX = -Math.cos(angle) * (player.width * 0.35);
-        const offsetY = -Math.sin(angle) * (player.height * 0.35);
-        
-        // Чередуем левую и правую ногу
-        const footOffset = (footprints.length % 2 === 0 ? -1 : 1) * player.width * 0.2;
-        const perpAngle = angle + Math.PI / 2;
-        const footX = Math.cos(perpAngle) * footOffset;
-        const footY = Math.sin(perpAngle) * footOffset;
-        
+    if (player.y < halfH) player.y = halfH;
+    else if (player.y > WORLD_HEIGHT - halfH) player.y = WORLD_HEIGHT - halfH;
+
+    // === 3. СЛЕДЫ ===
+    if ((jx !== 0 || jy !== 0) && Math.random() < 0.10) {
+        const angle = Math.atan2(jy, jx);
+
+        const offset = player.width * 0.35;
+        const offsetX = -Math.cos(angle) * offset;
+        const offsetY = -Math.sin(angle) * offset;
+
+        const footOffset = (footprints.length & 1 ? -1 : 1) * player.width * 0.2;
+        const perp = angle + Math.PI / 2;
+
         footprints.push({
-            x: player.x + offsetX + footX,
-            y: player.y + offsetY + footY + player.height * 0.25,  // Следы под ногами
-            alpha: 0.7,      // Начальная прозрачность
-            size: 7 + Math.random() * 3,  // Размер следа
-            rotation: angle + Math.PI / 2  // Поворот следа (перпендикулярно движению)
+            x: player.x + offsetX + Math.cos(perp) * footOffset,
+            y: player.y + offsetY + Math.sin(perp) * footOffset + player.height * 0.25,
+            alpha: 0.7,
+            size: 7 + Math.random() * 3,
+            rotation: perp
         });
+
+        if (footprints.length > 200) footprints.shift();
     }
 }
 
 // ===== ОТРИСОВКА ИГРОКА =====
-
-/**
- * Отрисовка игрока на canvas (квадратный пиксельный стиль)
- * @param {CanvasRenderingContext2D} ctx - Контекст canvas
- */
 function renderPlayer(ctx) {
     ctx.save();
     ctx.translate(player.x, player.y);
 
     const w = player.width;
-    const headSize = w * 1.0; // Голова равна размеру игрока
+    const head = w;
 
-    // === ГОЛОВА (белый квадрат) ===
+    // Голова
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(-headSize/2, -headSize/2, headSize, headSize);
+    ctx.fillRect(-head/2, -head/2, head, head);
 
-    // === ГЛАЗА (черные квадраты) ===
-    const eyeSize = headSize * 0.2;
-    const eyeOffsetX = headSize * 0.25;
-    const eyeOffsetY = -headSize * 0.15;
-    
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(-eyeOffsetX - eyeSize/2, eyeOffsetY - eyeSize/2, eyeSize, eyeSize);
-    ctx.fillRect(eyeOffsetX - eyeSize/2, eyeOffsetY - eyeSize/2, eyeSize, eyeSize);
+    // Глаза
+    const eye = head * 0.2;
+    const ex = head * 0.25;
+    const ey = -head * 0.15;
 
-    // === РОТ (черная линия) ===
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(-headSize * 0.25, eyeOffsetY + eyeSize * 1.2, headSize * 0.5, headSize * 0.08);
-    
-    // === ВСПЫШКА ВЫСТРЕЛА (если активна) - рисуем перед игроком ===
-    if (typeof muzzleFlash !== 'undefined' && muzzleFlash > 0 && typeof lastShotAngle !== 'undefined') {
-        const flashAlpha = Math.min(1, muzzleFlash / 3);
-        ctx.globalAlpha = flashAlpha;
-        
-        // Позиция вспышки перед игроком
-        const flashDistance = headSize * 0.6;
-        const flashX = Math.cos(lastShotAngle) * flashDistance;
-        const flashY = Math.sin(lastShotAngle) * flashDistance;
-        const flashSize = headSize * 0.4;
-        
+    ctx.fillStyle = "#000";
+    ctx.fillRect(-ex - eye/2, ey - eye/2, eye, eye);
+    ctx.fillRect(ex - eye/2, ey - eye/2, eye, eye);
+
+    // Рот
+    ctx.fillRect(-head * 0.25, ey + eye * 1.2, head * 0.5, head * 0.08);
+
+    // Вспышка
+    if (muzzleFlash > 0 && typeof lastShotAngle !== 'undefined') {
+        const alpha = Math.min(1, muzzleFlash / 3);
+        ctx.globalAlpha = alpha;
+
+        const dist = head * 0.6;
+        const fx = Math.cos(lastShotAngle) * dist;
+        const fy = Math.sin(lastShotAngle) * dist;
+        const size = head * 0.4;
+
         ctx.save();
-        ctx.translate(flashX, flashY);
+        ctx.translate(fx, fy);
         ctx.rotate(lastShotAngle);
-        
-        // Яркая вспышка
+
         ctx.fillStyle = "#ffd42a";
-        ctx.fillRect(0, -flashSize/2, flashSize * 1.5, flashSize);
+        ctx.fillRect(0, -size/2, size * 1.5, size);
+
         ctx.fillStyle = "#ffaa00";
-        ctx.fillRect(flashSize * 0.3, -flashSize/3, flashSize, flashSize * 0.6);
-        
+        ctx.fillRect(size * 0.3, -size/3, size, size * 0.6);
+
         ctx.restore();
-        ctx.globalAlpha = 1.0;
+        ctx.globalAlpha = 1;
     }
 
     ctx.restore();
 }
-

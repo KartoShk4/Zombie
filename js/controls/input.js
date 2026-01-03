@@ -1,47 +1,28 @@
 /* ============================================
-   УПРАВЛЕНИЕ ПАУЗОЙ
-   ============================================
-   Обработка клавиш для паузы игры
-   (только для мобильных устройств с клавиатурой)
+   INPUT — ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
    ============================================ */
 
-// ===== СОСТОЯНИЕ КЛАВИШ =====
-// Объект для отслеживания клавиш паузы
 let keys = {
-    p: false,          // Пауза
-    Escape: false      // Пауза (Escape)
+    p: false,
+    Escape: false
 };
 
-// ===== ОБРАБОТКА НАЖАТИЙ КЛАВИШ =====
+window.addEventListener("keydown", e => {
+    const k = e.key;
 
-/**
- * Обработчик нажатия клавиши (только пауза)
- */
-window.addEventListener('keydown', e => {
-    const k = e.key.toLowerCase();
-
-    // Пауза (P или Escape) - только для устройств с клавиатурой
-    if (k === "p" || e.key === "Escape") {
-        if (gameStarted && !isPaused) {
-            pauseGame();
-        } else if (isPaused) {
-            resumeGame();
+    if (k === "p" || k === "P" || k === "Escape") {
+        if (gameStarted) {
+            if (!isPaused) pauseGame();
+            else resumeGame();
         }
+
         keys.p = true;
         keys.Escape = true;
         e.preventDefault();
-        return;
     }
 });
 
-/**
- * Обработчик отпускания клавиши (только пауза)
- */
-window.addEventListener('keyup', e => {
-    const k = e.key.toLowerCase();
-
-    // Пауза
-    if (k === "p") keys.p = false;
+window.addEventListener("keyup", e => {
+    if (e.key === "p" || e.key === "P") keys.p = false;
     if (e.key === "Escape") keys.Escape = false;
 });
-
