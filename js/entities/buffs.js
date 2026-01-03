@@ -331,18 +331,18 @@ function renderBuffs(ctx) {
         ctx.globalAlpha = 0.6;
         ctx.fillStyle = baseColor;
         ctx.beginPath();
-        ctx.arc(0, 0, b.size * 1.2, 0, Math.PI * 2);
+        ctx.arc(0, 0, b.size, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1.0;
         
         // Внешняя рамка (более яркая и толстая)
         ctx.strokeStyle = baseColor;
-        ctx.lineWidth = 4;  // Увеличена толщина рамки
+        ctx.lineWidth = 2;  // Увеличена толщина рамки
         ctx.strokeRect(-b.size/2 - 4, -b.size/2 - 4, b.size + 8, b.size + 8);
         
         // Внутренняя рамка (белая для контраста, или красная для негативных)
         ctx.strokeStyle = isNegative ? '#ff0000' : '#ffffff';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.strokeRect(-b.size/2, -b.size/2, b.size, b.size);
         
         // Фон (полностью непрозрачный, темнее для негативных)
@@ -355,13 +355,13 @@ function renderBuffs(ctx) {
         
         // Иконка (более крупная и яркая)
         ctx.fillStyle = '#ffffff';
-        ctx.font = `${b.size * 1.5}px 'Press Start 2P'`;  // Увеличено до 1.5 для лучшей читаемости
+        ctx.font = `${b.size * 1.1}px 'Press Start 2P'`;  // Увеличено до 1.1 для лучшей читаемости
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         
         // Добавляем яркое свечение вокруг иконки
         ctx.shadowColor = baseColor;
-        ctx.shadowBlur = 20;  // Увеличено свечение
+        ctx.shadowBlur = 15;  // Увеличено свечение
         ctx.fillText(b.icon, 0, 0);
         ctx.shadowBlur = 0;
         
@@ -370,7 +370,7 @@ function renderBuffs(ctx) {
             ctx.strokeStyle = '#ff0000';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(0, 0, b.size * 1.3, 0, Math.PI * 2);
+            ctx.arc(0, 0, b.size * 1.1, 0, Math.PI * 2);
             ctx.stroke();
         }
         

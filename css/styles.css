@@ -91,6 +91,9 @@ body {
 
 /* Контент меню - центрированный блок */
 .menu-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
     position: relative;
     z-index: 10;

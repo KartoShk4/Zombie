@@ -139,7 +139,7 @@ function renderHUD(ctx) {
             const timeLeft = Math.max(0, Math.floor(buff.timeLeft));
             ctx.fillStyle = timeLeft <= 3 ? "#ff0000" : "#ff6666"; // Ярко-красный для негативных
             ctx.font = isMobile ? "8px 'Press Start 2P'" : "7px 'Press Start 2P'";
-            ctx.fillText(timeLeft + "s", buffWidth - 5, buffY + (isMobile ? 7 : 5));
+            ctx.fillText(timeLeft + "s", buffWidth - 20, buffY + (isMobile ? 7 : 5));
             
             ctx.restore();
             buffY -= (isMobile ? 28 : 25);
@@ -182,79 +182,123 @@ function renderHUD(ctx) {
         }
     }
 
-    // === 5. ЗВАНИЕ (показывается только при получении, по центру, ниже верхних элементов) ===
-    const rankShowing = typeof rankDisplayTime !== 'undefined' && rankDisplayTime > 0 && typeof currentDisplayRank !== 'undefined' && currentDisplayRank;
+    // === 5. ЗВАНИЕ (эпический показ при получении) ===
+    const rankShowing =
+        rankDisplayTime > 0 &&
+        currentDisplayRank;
+
     if (rankShowing) {
         ctx.save();
         ctx.textAlign = "center";
-        ctx.font = "12px 'Press Start 2P'";
-        
-        // Плавное появление/исчезание
-        const alpha = Math.min(1, rankDisplayTime / 0.5);
-        ctx.globalAlpha = alpha > 0.3 ? 1 : alpha / 0.3;
-        
+
         const cssW = canvas.clientWidth || window.innerWidth;
-        ctx.fillStyle = currentDisplayRank.color;
-        // Показываем по центру, достаточно низко, чтобы не мешать верхним элементам
-        // Учитываем высоту HP (до ~37px) и счет/волну (до ~85px на мобильных)
         const rankY = isMobile ? 95 : 60;
-        ctx.fillText(currentDisplayRank.name, cssW / 2, rankY);
+
+        // --- Плавное появление ---
+        const appearTime = 0.5; // время появления
+        const alpha = Math.min(1, rankDisplayTime / appearTime);
+        ctx.globalAlpha = alpha;
+
+        // --- Эффект увеличения (zoom-in) ---
+        const scale = 1 + (1 - alpha) * 0.4; // от 1.4 → 1.0
+        ctx.translate(cssW / 2, rankY);
+        ctx.scale(scale, scale);
+
+        // --- Лёгкая вибрация (пульсация) ---
+        const pulse = Math.sin(performance.now() * 0.01) * 2;
+
+        // --- Сияние вокруг текста ---
+        ctx.shadowColor = currentDisplayRank.color;
+        ctx.shadowBlur = 25;
+
+        // --- Основной текст ---
+        ctx.font = "18px 'Press Start 2P'";
+        ctx.fillStyle = currentDisplayRank.color;
+        ctx.fillText(currentDisplayRank.name, 0, pulse);
+
+        // --- Внешний контур для читаемости ---
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "rgba(0,0,0,0.6)";
+        ctx.strokeText(currentDisplayRank.name, 0, pulse);
+
         ctx.restore();
     }
 
-    // === 6. ДОСТИЖЕНИЕ (показывается только при получении, по центру, ниже звания или верхних элементов) ===
-    const achievementShowing = typeof achievementDisplayTime !== 'undefined' && achievementDisplayTime > 0 && typeof currentDisplayAchievement !== 'undefined' && currentDisplayAchievement;
+
+    // === 6. ДОСТИЖЕНИЕ — эффектная золотая карточка ===
+    const achievementShowing =
+        achievementDisplayTime > 0 &&
+        currentDisplayAchievement;
+
     if (achievementShowing) {
         ctx.save();
         ctx.textAlign = "center";
-        
-        // Плавное появление/исчезание
-        const alpha = Math.min(1, achievementDisplayTime / 0.5);
-        ctx.globalAlpha = alpha > 0.3 ? 1 : alpha / 0.3;
-        
+
         const cssW = canvas.clientWidth || window.innerWidth;
-        // Позиционируем ниже звания, если оно показывается, иначе ниже верхних элементов
-        const baseAchievementY = isMobile ? 95 : 60;
-        const achievementY = rankShowing ? baseAchievementY + 20 : baseAchievementY;
-        
-        // Размеры рамки
-        const framePadding = 12;
-        const frameWidth = 200;
-        const frameHeight = 60;
+
+        // Позиция (ниже звания, если оно есть)
+        const baseY = isMobile ? 110 : 80;
+        const achievementY = rankShowing ? baseY + 30 : baseY;
+
+        // --- Плавное появление ---
+        const appearTime = 0.5;
+        const alpha = Math.min(1, achievementDisplayTime / appearTime);
+        ctx.globalAlpha = alpha;
+
+        // --- Плавный подъём карточки (slide-up) ---
+        const slideOffset = (1 - alpha) * 20;
+
+        // --- Пульсация рамки ---
+        const pulse = 1 + Math.sin(performance.now() * 0.005) * 0.05;
+
+        // Размер карточки
+        const frameWidth = 220;
+        const frameHeight = 70;
         const frameX = cssW / 2 - frameWidth / 2;
-        const frameY = achievementY - frameHeight / 2;
-        
-        // Золотая рамка (внешняя)
-        ctx.strokeStyle = "#ffd700";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(frameX - 2, frameY - 2, frameWidth + 4, frameHeight + 4);
-        
-        // Золотая рамка (внутренняя)
-        ctx.strokeStyle = "#ffaa00";
+        const frameY = achievementY - frameHeight / 2 + slideOffset;
+
+        // --- Градиентная золотая рамка ---
+        const gradient = ctx.createLinearGradient(frameX, frameY, frameX + frameWidth, frameY + frameHeight);
+        gradient.addColorStop(0, "#ffea8a");
+        gradient.addColorStop(1, "#ffb300");
+
+        ctx.lineWidth = 4 * pulse;
+        ctx.strokeStyle = gradient;
+        ctx.strokeRect(frameX - 3, frameY - 3, frameWidth + 6, frameHeight + 6);
+
+        // --- Внутренняя рамка ---
         ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(255, 215, 0, 0.8)";
         ctx.strokeRect(frameX, frameY, frameWidth, frameHeight);
-        
-        // Фон рамки (полупрозрачный черный)
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+
+        // --- Фон карточки ---
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
         ctx.fillRect(frameX, frameY, frameWidth, frameHeight);
-        
-        // Текст "Новое достижение"
-        ctx.font = "8px 'Press Start 2P'";
-        ctx.fillStyle = "#ffd700";
-        ctx.fillText("НОВОЕ ДОСТИЖЕНИЕ", cssW / 2, frameY + 12);
-        
-        // Иконка достижения
-        ctx.font = "16px 'Press Start 2P'";
-        ctx.fillStyle = "#ffd700";
-        ctx.fillText(currentDisplayAchievement.icon || "🏆", cssW / 2, frameY + 28);
-        
-        // Название достижения
+
+        // --- Свечение вокруг карточки ---
+        ctx.shadowColor = "rgba(255, 200, 50, 0.8)";
+        ctx.shadowBlur = 25;
+
+        // --- Заголовок ---
         ctx.font = "9px 'Press Start 2P'";
+        ctx.fillStyle = "#ffe066";
+        ctx.fillText("ДОСТИЖЕНИЕ ПОЛУЧЕНО", cssW / 2, frameY + 14);
+
+        // --- Иконка достижения ---
+        ctx.shadowBlur = 0;
+        ctx.font = "20px 'Press Start 2P'";
         ctx.fillStyle = "#ffd700";
-        ctx.fillText(currentDisplayAchievement.name, cssW / 2, frameY + 48);
-        
+        ctx.fillText(currentDisplayAchievement.icon || "🏆", cssW / 2, frameY + 34);
+
+        // --- Название достижения ---
+        ctx.font = "10px 'Press Start 2P'";
+        ctx.fillStyle = "#fff";
+        ctx.fillText(currentDisplayAchievement.name, cssW / 2, frameY + 56);
+
         ctx.restore();
     }
+
 
     // === 7. УВЕДОМЛЕНИЕ О ДОСТУПНОМ УЛУЧШЕНИИ (только во время игры, не в паузе) ===
     const upgradeNotificationShowing = typeof upgradeNotificationTime !== 'undefined' && upgradeNotificationTime > 0 && !isPaused;

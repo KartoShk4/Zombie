@@ -38,56 +38,34 @@ function cancelNewGame() {
  * @param {boolean} loadFromSave - Загружать ли из сохранения
  */
 function startGame(loadFromSave = false) {
-    // Если новая игра и есть сохранение, показываем модальное окно
     if (!loadFromSave && typeof hasSave === 'function' && hasSave() && !newGameConfirmed) {
         document.getElementById("main-menu").classList.add("hidden");
         document.getElementById("new-game-warning").classList.remove("hidden");
-        return; // Ждем подтверждения
+        return;
     }
-    
-    // Сбрасываем флаг подтверждения
+
     newGameConfirmed = false;
-    
     document.getElementById("main-menu").classList.add("hidden");
     document.getElementById("new-game-warning").classList.add("hidden");
-    canvas.classList.add("game-active"); // Показываем canvas
+    canvas.classList.add("game-active");
     gameStarted = true;
     isPaused = false;
-    
-    // Если загружаем из сохранения, восстанавливаем состояние
+
     if (loadFromSave) {
         const saveData = loadGame();
         if (saveData) {
             restoreGame(saveData);
-            
-            // Инициализируем lastRankScore на основе загруженного счета
             if (typeof getRankByScore === 'function' && typeof score !== 'undefined') {
                 const currentRank = getRankByScore(score);
                 lastRankScore = currentRank.minScore;
             }
         }
-        
-        // Применяем улучшения после загрузки
-        if (typeof applyUpgrades === 'function') {
-            applyUpgrades();
-        }
+        if (typeof applyUpgrades === 'function') applyUpgrades();
     } else {
-        // НОВАЯ ИГРА - полностью сбрасываем состояние
-        // Удаляем сохранение
-        deleteSave();
-        
-        // Сбрасываем монеты пользователя при новой игре
-        if (typeof addCoins === 'function' && typeof getCoins === 'function') {
-            const currentCoins = getCoins();
-            if (currentCoins > 0) {
-                addCoins(-currentCoins); // Сбрасываем все монеты
-            }
-        }
-        
-        // Скрываем кнопку "Продолжить" в главном меню
+        deleteSave(); // удаляем только временное сохранение
+
         document.getElementById("continue-btn").style.display = "none";
-        
-        // Сбрасываем игровые переменные
+
         wave = 1;
         score = 0;
         zombiesKilled = 0;
@@ -101,88 +79,41 @@ function startGame(loadFromSave = false) {
         pendingAchievements = [];
         upgradeNotificationTime = 0;
         lastUpgradeCheckTime = 0;
-        coinSpawnTimer = 0;
-        buffSpawnTimer = 0;
-        if (typeof getRankByScore === 'function') {
-            lastRankScore = getRankByScore(0).minScore;
-        } else {
-            lastRankScore = 0;
-        }
-        
-        // Очищаем массивы
+        coinSpawnTimer = 5 + Math.random() * 5;
+        buffSpawnTimer = 8 + Math.random() * 7;
+        lastRankScore = typeof getRankByScore === 'function' ? getRankByScore(0).minScore : 0;
+
         zombies = [];
         bullets = [];
         footprints = [];
         blood = [];
         if (typeof hearts !== 'undefined') hearts = [];
         if (typeof coins !== 'undefined') coins = [];
-        
-        // Сбрасываем счетчик ID зомби
-        if (typeof nextZombieId !== 'undefined') {
-            nextZombieId = 1;
-        }
-        
-        // Сбрасываем позицию игрока на центр мира
+        if (typeof buffs !== 'undefined') buffs = [];
+
+        if (typeof nextZombieId !== 'undefined') nextZombieId = 1;
+
         player.x = WORLD_WIDTH / 2;
         player.y = WORLD_HEIGHT / 2;
         playerHitCooldown = 0;
-        
-        // Применяем сложность к игроку (только при новой игре)
+
         applyDifficultyToPlayer();
-        
-        // Применяем улучшения
-        if (typeof applyUpgrades === 'function') {
-            applyUpgrades();
-        }
-        
-        // Инициализируем таймер случайного спавна монеток
-        coinSpawnTimer = 5 + Math.random() * 5; // Первая монетка через 5-10 секунд
-        // Инициализируем таймер случайного спавна баффов (как монеты - чаще)
-        buffSpawnTimer = 8 + Math.random() * 7; // Первый бафф через 8-15 секунд
-        
-        // Очищаем монетки при новой игре
-        if (typeof coins !== 'undefined') coins = [];
-        
-        // Сбрасываем счетчик зомби
-        if (typeof totalZombiesSpawned !== 'undefined') {
-            totalZombiesSpawned = 0;
-        }
-        
-        // Сбрасываем флаг уведомления
+        if (typeof applyUpgrades === 'function') applyUpgrades();
+
+        buffSpawnTimer = 15 + Math.random() * 10;
         upgradeNotificationShownThisWave = false;
-        
-        // Генерируем препятствия
-        if (typeof generateObstacles === 'function') {
-            generateObstacles();
-        }
-        
-        // Очищаем старые баффы если они есть
-        if (typeof buffs !== 'undefined') {
-            buffs = [];
-        }
-        
-        // Инициализируем таймер спавна баффов (баффы будут спавниться во время игры, как монетки)
-        buffSpawnTimer = 15 + Math.random() * 10; // Первый бафф через 15-25 секунд
-        
-        // Запускаем первую волну
-        isWaveActive = false;
-        isWaveCooldown = false;
+
+        if (typeof generateObstacles === 'function') generateObstacles();
+
         setTimeout(() => {
-            if (typeof spawnWave === 'function') {
-                spawnWave(wave);
-            }
+            if (typeof spawnWave === 'function') spawnWave(wave);
         }, 100);
     }
-    
-    // Инициализируем камеру на игрока при старте
+
     const cssW = canvas.clientWidth || window.innerWidth;
     const cssH = canvas.clientHeight || window.innerHeight;
-    camera.x = player.x - cssW / 2;
-    camera.y = player.y - cssH / 2;
-    
-    // Ограничиваем камеру границами мира
-    camera.x = Math.max(0, Math.min(camera.x, WORLD_WIDTH - cssW));
-    camera.y = Math.max(0, Math.min(camera.y, WORLD_HEIGHT - cssH));
+    camera.x = Math.max(0, Math.min(player.x - cssW / 2, WORLD_WIDTH - cssW));
+    camera.y = Math.max(0, Math.min(player.y - cssH / 2, WORLD_HEIGHT - cssH));
 }
 
 // ===== УПРАВЛЕНИЕ НАСТРОЙКАМИ =====
@@ -347,6 +278,23 @@ function closeSoundSettings() {
 function openHowToPlay() {
     document.getElementById("main-menu").classList.add("hidden");
     document.getElementById("howto-menu").classList.remove("hidden");
+}
+
+/**
+ * Открытие меню "Справка"
+ */
+function openFaq() {
+    document.getElementById("main-menu").classList.add("hidden");
+    document.getElementById("faq-menu").classList.remove("hidden");
+}
+
+
+/**
+ * Закрытие меню "Справка"
+ */
+function closeFaq() {
+    document.getElementById("faq-menu").classList.add("hidden");
+    document.getElementById("main-menu").classList.remove("hidden");
 }
 
 /**

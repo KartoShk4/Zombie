@@ -15,17 +15,17 @@ let userCoins = 0;
 // ===== СИСТЕМА ЗВАНИЙ =====
 const ranks = [
     { name: 'Новичок', minScore: 0, color: '#888' },
-    { name: 'Ученик', minScore: 100, color: '#aaa' },
-    { name: 'Охотник', minScore: 250, color: '#4a4' },
-    { name: 'Ветеран', minScore: 500, color: '#4a8' },
-    { name: 'Убийца', minScore: 1000, color: '#48a' },
-    { name: 'Мастер', minScore: 2000, color: '#84a' },
-    { name: 'Элитный убийца', minScore: 3500, color: '#a48' },
-    { name: 'Легендарный убийца', minScore: 5000, color: '#fa4' },
-    { name: 'Божественный убийца', minScore: 7500, color: '#ff4' },
-    { name: 'Легенда', minScore: 10000, color: '#f44' },
-    { name: 'Бессмертный', minScore: 15000, color: '#f88' },
-    { name: 'Бог войны', minScore: 20000, color: '#faf' },
+    { name: 'Ученик', minScore: 30, color: '#aaa' },
+    { name: 'Охотник', minScore: 50, color: '#4a4' },
+    { name: 'Ветеран', minScore: 70, color: '#4a8' },
+    { name: 'Убийца', minScore: 100, color: '#48a' },
+    { name: 'Мастер', minScore: 130, color: '#84a' },
+    { name: 'Элитный убийца', minScore: 150, color: '#a48' },
+    { name: 'Легендарный убийца', minScore: 170, color: '#fa4' },
+    { name: 'Божественный убийца', minScore: 200, color: '#ff4' },
+    { name: 'Легенда', minScore: 230, color: '#f44' },
+    { name: 'Бессмертный', minScore: 250, color: '#f88' },
+    { name: 'Бог войны', minScore: 270, color: '#faf' },
 ];
 
 /**

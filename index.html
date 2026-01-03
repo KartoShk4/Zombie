@@ -37,6 +37,7 @@
         <button class="menu-btn" onclick="openAchievements()">🎖️ Достижения</button>
         <button class="menu-btn" onclick="openSettings()">⚙ Настройки</button>
         <button class="menu-btn" onclick="openHowToPlay()">❓ Как играть</button>
+        <button class="menu-btn" onclick="openFaq()">❗ Справка</button>
     </div>
 </div>
 
@@ -81,6 +82,11 @@
             </button>
         </div>
 
+        <button class="menu-btn danger" onclick="openResetWarning()">
+            🔄 Сбросить прогресс
+        </button>
+
+
         <button class="menu-btn" onclick="closeSettings()">Назад</button>
     </div>
 </div>
@@ -90,7 +96,7 @@
     <div class="menu-content">
         <h2 class="title">Настройки графики</h2>
         
-        <div style="margin: 30px 0;">
+        <div style="margin: 30px 0;" >
             <h3 class="settings-section-title">Качество графики</h3>
             
             <button class="menu-btn graphics-quality-btn" data-quality="low" onclick="selectGraphicsQuality('low')" style="width: 220px;">
@@ -148,6 +154,40 @@
         <button class="menu-btn" onclick="closeHowToPlay()">Назад</button>
     </div>
 </div>
+
+<!-- Справка -->
+<div id="faq-menu" class="menu hidden">
+    <div class="menu-content" style="max-width: 360px;">
+
+        <h2 class="title" style="color:#ffd700; margin-bottom: 15px;">Справка</h2>
+
+        <div class="text" style="
+            font-size: 12px;
+            line-height: 1.8;
+            background: rgba(0,0,0,0.4);
+            border: 2px solid #555;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: left;
+        ">
+            <strong style="color:#ff6666;">⚠️ Важно:</strong><br>
+            Игра хранит ваш прогресс прямо в браузере.<br><br>
+
+            <span style="color:#ffd700;">• Достижения</span> ⭐<br>
+            <span style="color:#ffd700;">• Улучшения</span> 🔧<br>
+            <span style="color:#ffd700;">• Монеты</span> 🪙<br>
+            <span style="color:#ffd700;">• Рейтинг</span> 🏆<br><br>
+
+            Если вы очистите данные браузера или включите режим,
+            который блокирует сохранения, <strong style="color:#ff4444;">весь прогресс будет потерян</strong>.
+        </div>
+
+        <button class="menu-btn" onclick="closeFaq()" style="margin-top: 20px;">
+            Назад
+        </button>
+    </div>
+</div>
+
 
 <!-- Game Over -->
 <div id="game-over" class="menu hidden">
@@ -218,16 +258,47 @@
 <!-- Предупреждение о новой игре -->
 <div id="new-game-warning" class="menu hidden">
     <div class="menu-content">
-        <h2 class="title" style="color: #ff4444;">⚠️ ВНИМАНИЕ!</h2>
+        <h2 class="title" style="color: #ff4444;">⚠️ НОВАЯ ИГРА</h2>
         <p class="text" style="font-size: 12px; line-height: 1.8; margin: 20px 0;">
-            Начав новую игру, вы потеряете весь текущий прогресс:<br><br>
-            • Текущая волна и счет<br>
-            • Сохранение игры<br>
-            • Все монетки, собранные в этой сессии<br><br>
+            Начав новую игру, вы сбросите только текущую попытку:<br><br>
+            • Текущая волна и счёт<br>
+            • Текущее состояние карты<br>
+            • Временное сохранение сессии<br><br>
+            <strong style="color:#ffd700;">Ваши монеты, улучшения и достижения сохранятся.</strong><br><br>
+            Продолжить?
+        </p>
+        <button class="menu-btn" onclick="confirmNewGame()" style="background: #ff4444; border-color: #ff6666;">
+            Да, начать новую игру
+        </button>
+        <button class="menu-btn" onclick="cancelNewGame()">Отмена</button>
+    </div>
+</div>
+
+<!-- Предупреждение о полном сбросе прогресса -->
+<div id="reset-warning" class="menu hidden">
+    <div class="menu-content">
+        <h2 class="title" style="color: #ff4444;">⚠️ ПОЛНЫЙ СБРОС ПРОГРЕССА</h2>
+
+        <p class="text" style="font-size: 12px; line-height: 1.8; margin: 20px 0;">
+            Это действие <strong style="color:#ff6666;">НЕОБРАТИМО</strong>.<br><br>
+            Будут удалены:<br>
+            • Все монеты 🪙<br>
+            • Все улучшения 🔧<br>
+            • Все достижения ⭐<br>
+            • Рейтинг и лучший результат 🏆<br>
+            • Сохранение игры 💾<br><br>
+            <strong style="color:#ffd700;">Ваш никнейм останется.</strong><br><br>
             Вы уверены, что хотите продолжить?
         </p>
-        <button class="menu-btn" onclick="confirmNewGame()" style="background: #ff4444; border-color: #ff6666;">Да, начать новую игру</button>
-        <button class="menu-btn" onclick="cancelNewGame()">Отмена</button>
+
+        <button class="menu-btn" onclick="confirmResetProgress()"
+                style="background:#ff4444; border-color:#ff6666;">
+            Да, сбросить всё
+        </button>
+
+        <button class="menu-btn" onclick="cancelResetProgress()">
+            Отмена
+        </button>
     </div>
 </div>
 
@@ -254,11 +325,14 @@
 <script src="js/core/upgrades.js" defer></script>
 <script src="js/core/save.js" defer></script>
 <script src="js/core/sound.js" defer></script>
-<script src="js/core/graphics.js" defer></script>
-<script src="js/core/grid.js"></script>
 
-<!-- Основные модули игры (должны загружаться после config и других систем) -->
+<!-- ВАЖНО: game_state.js ДОЛЖЕН ИДТИ ПЕРЕД graphics.js -->
 <script src="js/core/game_state.js" defer></script>
+<script src="js/core/graphics.js" defer></script>
+
+<script src="js/core/grid.js" defer></script>
+
+<!-- Основные модули игры -->
 <script src="js/core/background.js" defer></script>
 <script src="js/core/effects.js" defer></script>
 <script src="js/core/camera.js" defer></script>
@@ -267,6 +341,10 @@
 <script src="js/core/revive.js" defer></script>
 <script src="js/core/pause.js" defer></script>
 <script src="js/core/game_loop.js" defer></script>
+
+<!-- reset.js ДОЛЖЕН БЫТЬ defer и стоять ПЕРЕД menu.js или ПОСЛЕ, но с defer -->
+<script src="js/core/reset.js" defer></script>
+
 <script src="js/core/main.js" defer></script>
 
 <!-- Управление -->
@@ -286,7 +364,6 @@
 <script src="js/ui/pixel_heart.js" defer></script>
 <script src="js/ui/hud.js" defer></script>
 <script src="js/ui/settings_sound.js" defer></script>
-
 
 <!-- Игровая логика -->
 <script src="js/game/wave.js" defer></script>
